@@ -56,14 +56,18 @@ class Cronicle_Plugin {
         // Include API client class
         require_once CRONICLE_PLUGIN_DIR . 'includes/class-cronicle-api-client.php';
         
-        // Include main admin page class
-        require_once CRONICLE_PLUGIN_DIR . 'includes/class-cronicle-admin-main.php';
+        // Include refactored admin classes
+        require_once CRONICLE_PLUGIN_DIR . 'includes/admin/class-cronicle-router.php';
+        require_once CRONICLE_PLUGIN_DIR . 'includes/admin/class-cronicle-ui.php';
+        require_once CRONICLE_PLUGIN_DIR . 'includes/admin/class-cronicle-enqueue.php';
+        require_once CRONICLE_PLUGIN_DIR . 'includes/admin/class-cronicle-chat-handler.php';
+        require_once CRONICLE_PLUGIN_DIR . 'includes/admin/class-cronicle-admin-main-refactored.php';
         
         // Initialize admin settings
         new Cronicle_Admin_Settings();
         
-        // Initialize main admin page
-        new Cronicle_Admin_Main();
+        // Initialize refactored main admin page
+        new Cronicle_Admin_Main_Refactored();
     }
 }
 
