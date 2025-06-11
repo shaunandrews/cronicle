@@ -535,8 +535,12 @@ class Cronicle_Admin_Main {
             ));
         }
         
+        // Gather site and user context
+        $site_context = $this->get_site_context();
+        $user_context = $this->get_user_context();
+        
         // Create structured prompt for blog post generation
-        $structured_prompt = $this->build_post_generation_prompt($message, $mode);
+        $structured_prompt = $this->build_post_generation_prompt($message, $mode, $site_context, $user_context);
         
         // Generate response using Claude
         $response = $api_client->generate_content($structured_prompt, array(
@@ -568,11 +572,137 @@ class Cronicle_Admin_Main {
     }
     
     /**
+     * Get site context information
+     */
+    private function get_site_context() {
+        $site_context = array(
+            'title' => get_bloginfo('name'),
+            'tagline' => get_bloginfo('description'),
+            'url' => get_site_url(),
+            'admin_email' => get_option('admin_email'),
+            'language' => get_locale(),
+            'timezone' => get_option('timezone_string') ?: 'UTC'
+        );
+        
+        // Get site categories for additional context
+        $categories = get_categories(array(
+            'orderby' => 'count',
+            'order' => 'DESC',
+            'number' => 5,
+            'hide_empty' => true
+        ));
+        
+        if (!empty($categories)) {
+            $site_context['popular_categories'] = array_map(function($cat) {
+                return $cat->name;
+            }, $categories);
+        }
+        
+        // Get recent post titles for context about content style
+        $recent_posts = get_posts(array(
+            'numberposts' => 5,
+            'post_status' => 'publish',
+            'fields' => 'ids'
+        ));
+        
+        if (!empty($recent_posts)) {
+            $site_context['recent_post_titles'] = array_map('get_the_title', $recent_posts);
+        }
+        
+        return $site_context;
+    }
+    
+    /**
+     * Get current user context information
+     */
+    private function get_user_context() {
+        $current_user = wp_get_current_user();
+        
+        $user_context = array(
+            'display_name' => $current_user->display_name,
+            'user_login' => $current_user->user_login,
+            'user_email' => $current_user->user_email,
+            'roles' => $current_user->roles
+        );
+        
+        // Get user meta information
+        $user_meta_fields = array(
+            'first_name' => get_user_meta($current_user->ID, 'first_name', true),
+            'last_name' => get_user_meta($current_user->ID, 'last_name', true),
+            'description' => get_user_meta($current_user->ID, 'description', true),
+            'user_url' => $current_user->user_url
+        );
+        
+        // Only include non-empty meta fields
+        foreach ($user_meta_fields as $key => $value) {
+            if (!empty($value)) {
+                $user_context[$key] = $value;
+            }
+        }
+        
+        // Get user's post count and recent activity
+        $user_context['post_count'] = count_user_posts($current_user->ID, 'post');
+        
+        return $user_context;
+    }
+    
+    /**
+     * Build context section for AI prompt
+     */
+    private function build_context_section($site_context, $user_context) {
+        $context_parts = array();
+        
+        if (!empty($site_context)) {
+            $context_parts[] = "SITE CONTEXT:";
+            $context_parts[] = "- Site Name: " . $site_context['title'];
+            
+            if (!empty($site_context['tagline'])) {
+                $context_parts[] = "- Site Tagline: " . $site_context['tagline'];
+            }
+            
+            if (!empty($site_context['popular_categories'])) {
+                $context_parts[] = "- Popular Categories: " . implode(', ', $site_context['popular_categories']);
+            }
+            
+            if (!empty($site_context['recent_post_titles'])) {
+                $context_parts[] = "- Recent Post Titles: " . implode(', ', array_slice($site_context['recent_post_titles'], 0, 3));
+            }
+        }
+        
+        if (!empty($user_context)) {
+            if (!empty($context_parts)) {
+                $context_parts[] = "";
+            }
+            
+            $context_parts[] = "AUTHOR CONTEXT:";
+            $context_parts[] = "- Author: " . $user_context['display_name'];
+            
+            if (!empty($user_context['description'])) {
+                $context_parts[] = "- Bio: " . wp_trim_words($user_context['description'], 30);
+            }
+            
+            if (!empty($user_context['post_count'])) {
+                $context_parts[] = "- Published Posts: " . $user_context['post_count'];
+            }
+            
+            if (!empty($user_context['user_url'])) {
+                $context_parts[] = "- Website: " . $user_context['user_url'];
+            }
+        }
+        
+        return !empty($context_parts) ? implode("\n", $context_parts) : '';
+    }
+    
+    /**
      * Build structured prompt for post generation
      */
-    private function build_post_generation_prompt($topic, $mode = 'draft') {
+    private function build_post_generation_prompt($topic, $mode = 'draft', $site_context = null, $user_context = null) {
+        $context_info = $this->build_context_section($site_context, $user_context);
+        
         if ($mode === 'outline') {
             return 'You are an expert blogger. Create a detailed outline for a blog post about: "' . $topic . '"
+
+' . $context_info . '
 
 Respond with valid JSON in this exact format:
 
@@ -590,12 +720,16 @@ Requirements:
 - Focus on structure and key talking points, not full content
 - Make it actionable and logical flow
 - The chat_response should mention it\'s an outline and how many sections
+- Consider the site context and user information to make the content relevant and appropriate
+- If the site has specific categories or themes, try to align the content accordingly
 
 Respond ONLY with the JSON, no additional text before or after.';
         }
         
         // Default draft mode
         return 'You are an expert blogger. Draft a new blog post about: "' . $topic . '"
+
+' . $context_info . '
 
 Respond with valid JSON in this exact format:
 
@@ -613,6 +747,9 @@ Requirements:
 - Include practical tips or actionable advice where relevant
 - Ensure the content is original and valuable to readers
 - The chat_response should be conversational and mention the post title and word count
+- Consider the site context and user information to make the content relevant and appropriate
+- If the site has specific categories or themes, try to align the content accordingly
+- Use a tone and style that matches the site\'s existing content if possible
 
 Respond ONLY with the JSON, no additional text before or after.';
     }
