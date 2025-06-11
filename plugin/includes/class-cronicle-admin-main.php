@@ -493,7 +493,7 @@ class Cronicle_Admin_Main {
     private function build_post_generation_prompt($topic) {
         return 'You are an expert blogger. Draft a new blog post about: "' . $topic . '"
 
-Please respond with valid JSON in this exact format:
+Respond with valid JSON in this exact format:
 
 {
     "chat_response": "A friendly message about the post you created (e.g., \'I\'ve created a new post titled \"Benefits of Morning Exercise\" with 487 words. The post covers key health benefits and practical tips to get started.\')",
@@ -510,7 +510,7 @@ Requirements:
 - Ensure the content is original and valuable to readers
 - The chat_response should be conversational and mention the post title and word count
 
-Please respond ONLY with the JSON, no additional text before or after.';
+Respond ONLY with the JSON, no additional text before or after.';
     }
     
     /**
