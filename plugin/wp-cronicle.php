@@ -56,8 +56,14 @@ class Cronicle_Plugin {
         // Include API client class
         require_once CRONICLE_PLUGIN_DIR . 'includes/class-cronicle-api-client.php';
         
+        // Include main admin page class
+        require_once CRONICLE_PLUGIN_DIR . 'includes/class-cronicle-admin-main.php';
+        
         // Initialize admin settings
         new Cronicle_Admin_Settings();
+        
+        // Initialize main admin page
+        new Cronicle_Admin_Main();
     }
 }
 
