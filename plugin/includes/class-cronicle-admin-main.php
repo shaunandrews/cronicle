@@ -169,10 +169,118 @@ class Cronicle_Admin_Main {
                 color: #721c24;
                 border: 1px solid #f5c6cb;
             }
+            .cronicle-main-content {
+                display: flex;
+                min-height: 600px;
+            }
             .cronicle-chat-container {
-                height: 600px;
+                flex: 1;
                 display: flex;
                 flex-direction: column;
+                min-height: 600px;
+            }
+            .cronicle-preview-container {
+                width: 400px;
+                border-left: 1px solid #c3c4c7;
+                background: #fff;
+                display: none;
+                flex-direction: column;
+            }
+            .cronicle-preview-container.active {
+                display: flex;
+            }
+            .cronicle-preview-header {
+                background: #f6f7f7;
+                border-bottom: 1px solid #c3c4c7;
+                padding: 15px 20px;
+                font-weight: 600;
+                font-size: 14px;
+                color: #23282d;
+            }
+            .cronicle-preview-content {
+                flex: 1;
+                padding: 20px;
+                overflow-y: auto;
+                background: #fff;
+            }
+            .cronicle-preview-post {
+                max-width: none;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                line-height: 1.6;
+                color: #23282d;
+            }
+            .cronicle-preview-post h1 {
+                margin: 0 0 20px 0;
+                font-size: 28px;
+                font-weight: 600;
+                line-height: 1.2;
+                color: #1d2327;
+                border-bottom: 1px solid #e0e0e0;
+                padding-bottom: 10px;
+            }
+            .cronicle-preview-post h2 {
+                margin: 25px 0 15px 0;
+                font-size: 22px;
+                font-weight: 600;
+                color: #1d2327;
+            }
+            .cronicle-preview-post h3 {
+                margin: 20px 0 12px 0;
+                font-size: 18px;
+                font-weight: 600;
+                color: #1d2327;
+            }
+            .cronicle-preview-post p {
+                margin: 0 0 16px 0;
+                font-size: 16px;
+                line-height: 1.6;
+            }
+            .cronicle-preview-post ul, .cronicle-preview-post ol {
+                margin: 0 0 16px 20px;
+                padding-left: 20px;
+            }
+            .cronicle-preview-post li {
+                margin-bottom: 8px;
+            }
+            .cronicle-preview-actions {
+                border-top: 1px solid #c3c4c7;
+                padding: 15px 20px;
+                background: #f6f7f7;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            .cronicle-preview-create-btn {
+                padding: 8px 16px;
+                background: #00a32a;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 600;
+                transition: background-color 0.2s;
+            }
+            .cronicle-preview-create-btn:hover:not(:disabled) {
+                background: #008a20;
+            }
+            .cronicle-preview-create-btn:disabled {
+                background: #c3c4c7;
+                cursor: not-allowed;
+            }
+            .cronicle-preview-close-btn {
+                padding: 8px 16px;
+                background: transparent;
+                color: #646970;
+                border: 1px solid #c3c4c7;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 13px;
+                transition: all 0.2s;
+            }
+            .cronicle-preview-close-btn:hover {
+                background: #f6f7f7;
+                border-color: #949494;
             }
             .cronicle-messages {
                 flex: 1;
@@ -290,6 +398,20 @@ class Cronicle_Admin_Main {
                 padding-top: 8px;
                 border-top: 1px solid #e0e0e0;
             }
+            @media (max-width: 1024px) {
+                .cronicle-main-content {
+                    flex-direction: column;
+                }
+                .cronicle-preview-container {
+                    width: 100%;
+                    border-left: none;
+                    border-top: 1px solid #c3c4c7;
+                    max-height: 400px;
+                }
+                .cronicle-chat-container {
+                    min-height: 400px;
+                }
+            }
             @media (max-width: 782px) {
                 .cronicle-container {
                     margin: 10px;
@@ -322,6 +444,13 @@ class Cronicle_Admin_Main {
                 .cronicle-input-form {
                     flex-direction: column;
                 }
+                .cronicle-preview-container {
+                    max-height: 300px;
+                }
+                .cronicle-preview-actions {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
             }
         ';
     }
@@ -338,6 +467,9 @@ class Cronicle_Admin_Main {
                 var $messages = $(".cronicle-messages");
                 var $typing = $(".cronicle-typing-indicator");
                 var $modeSelect = $(".cronicle-mode-select");
+                var $previewContainer = $(".cronicle-preview-container");
+                var $previewContent = $(".cronicle-preview-content");
+                var $previewActions = $(".cronicle-preview-actions");
                 
                 // Handle form submission
                 $form.on("submit", function(e) {
@@ -409,17 +541,31 @@ class Cronicle_Admin_Main {
                     var $message = $("<div>").addClass("cronicle-message").addClass(type);
                     var $content = $("<div>").addClass("cronicle-message-content").text(content);
                     
-                    // Add post creation button if this is post content
+                    // Add post creation button and preview if this is post content
                     if (data.is_post_content && data.post_data) {
                         var $actions = $("<div>").addClass("cronicle-post-actions");
                         var buttonText = data.post_data.is_outline ? "Create Outline Draft" : "Create Draft Post";
-                        var $button = $("<button>")
+                        var $createButton = $("<button>")
                             .addClass("cronicle-create-post-btn")
                             .text(buttonText)
                             .data("post-data", data.post_data);
                         
-                        $actions.append($button);
+                        var $previewButton = $("<button>")
+                            .addClass("button button-secondary")
+                            .text("Preview")
+                            .css({"margin-left": "8px", "padding": "8px 16px", "font-size": "13px"})
+                            .data("post-data", data.post_data)
+                            .on("click", function() {
+                                showPreview($(this).data("post-data"));
+                            });
+                        
+                        $actions.append($createButton).append($previewButton);
                         $content.append($actions);
+                        
+                        // Auto-show preview for new post content
+                        setTimeout(function() {
+                            showPreview(data.post_data);
+                        }, 500);
                     }
                     
                     $message.append($content);
@@ -432,8 +578,101 @@ class Cronicle_Admin_Main {
                     $messages.scrollTop($messages[0].scrollHeight);
                 }
                 
-                // Handle post creation button clicks
-                $(document).on("click", ".cronicle-create-post-btn", function() {
+                // Show preview of post content
+                function showPreview(postData) {
+                    if (!postData || !postData.title || !postData.content) {
+                        return;
+                    }
+                    
+                    // Convert WordPress blocks to HTML for preview
+                    var previewHTML = convertBlocksToHTML(postData.content);
+                    var previewTitle = postData.title;
+                    var isOutline = postData.is_outline;
+                    
+                    // Build preview HTML
+                    var $previewPost = $("<div>").addClass("cronicle-preview-post");
+                    $previewPost.append($("<h1>").text(previewTitle));
+                    $previewPost.append(previewHTML);
+                    
+                    // Update preview container
+                    $previewContent.empty().append($previewPost);
+                    
+                    // Update preview header
+                    var headerText = isOutline ? "Post Outline Preview" : "Post Preview";
+                    $previewContainer.find(".cronicle-preview-header").text(headerText);
+                    
+                    // Update action buttons
+                    var createButtonText = isOutline ? "Create Outline Draft" : "Create Draft Post";
+                    var $createBtn = $previewActions.find(".cronicle-preview-create-btn");
+                    if ($createBtn.length === 0) {
+                        $createBtn = $("<button>").addClass("cronicle-preview-create-btn");
+                        var $closeBtn = $("<button>").addClass("cronicle-preview-close-btn").text("Close Preview");
+                        
+                        $previewActions.empty().append($createBtn).append($closeBtn);
+                        
+                        // Handle close button
+                        $closeBtn.on("click", function() {
+                            $previewContainer.removeClass("active");
+                        });
+                    }
+                    
+                    $createBtn.text(createButtonText).data("post-data", postData);
+                    
+                    // Show preview container
+                    $previewContainer.addClass("active");
+                }
+                
+                // Convert WordPress blocks to HTML for preview
+                function convertBlocksToHTML(content) {
+                    var $temp = $("<div>").html(content);
+                    var result = "";
+                    
+                    $temp.find("*").each(function() {
+                        var $el = $(this);
+                        var tagName = this.tagName.toLowerCase();
+                        var text = $el.text().trim();
+                        
+                        if (!text) return;
+                        
+                        switch(tagName) {
+                            case "h1":
+                            case "h2":
+                            case "h3":
+                            case "h4":
+                            case "h5":
+                            case "h6":
+                                result += "<" + tagName + ">" + text + "</" + tagName + ">";
+                                break;
+                            case "p":
+                                result += "<p>" + text + "</p>";
+                                break;
+                            case "ul":
+                                result += "<ul>";
+                                $el.find("li").each(function() {
+                                    result += "<li>" + $(this).text() + "</li>";
+                                });
+                                result += "</ul>";
+                                break;
+                            case "ol":
+                                result += "<ol>";
+                                $el.find("li").each(function() {
+                                    result += "<li>" + $(this).text() + "</li>";
+                                });
+                                result += "</ol>";
+                                break;
+                        }
+                    });
+                    
+                    // If no structured content found, treat as plain text with line breaks
+                    if (!result) {
+                        result = content.replace(/\n/g, "<br>");
+                    }
+                    
+                    return result;
+                }
+                
+                // Handle post creation button clicks (both in chat and preview)
+                $(document).on("click", ".cronicle-create-post-btn, .cronicle-preview-create-btn", function() {
                     var $btn = $(this);
                     var postData = $btn.data("post-data");
                     
@@ -875,31 +1114,45 @@ Respond ONLY with the JSON, no additional text before or after.';
                         </p>
                     </div>
                 <?php else: ?>
-                    <div class="cronicle-chat-container">
-                        <div class="cronicle-messages">
-                            <div class="cronicle-message assistant">
-                                <div class="cronicle-message-content">
-                                    <?php _e('Hello! I\'m ready to help you with your blog posts. Choose "Full Draft" mode for a complete ready-to-publish post, or "Outline" mode for a structured outline that you can expand yourself. Just tell me what topic you\'d like to work on!', 'cronicle'); ?>
+                    <div class="cronicle-main-content">
+                        <div class="cronicle-chat-container">
+                            <div class="cronicle-messages">
+                                <div class="cronicle-message assistant">
+                                    <div class="cronicle-message-content">
+                                        <?php _e('Hello! I\'m ready to help you with your blog posts. Choose "Full Draft" mode for a complete ready-to-publish post, or "Outline" mode for a structured outline that you can expand yourself. Just tell me what topic you\'d like to work on!', 'cronicle'); ?>
+                                    </div>
                                 </div>
+                                <div style="clear: both;"></div>
                             </div>
-                            <div style="clear: both;"></div>
+                            
+                            <div class="cronicle-typing-indicator">
+                                <?php _e('Assistant is typing...', 'cronicle'); ?>
+                            </div>
+                            
+                            <div class="cronicle-input-area">
+                                <form class="cronicle-input-form">
+                                    <textarea 
+                                        class="cronicle-input" 
+                                        placeholder="<?php esc_attr_e('What would you like to write about? (e.g., benefits of exercise, cooking tips, travel destinations)', 'cronicle'); ?>"
+                                        rows="1"
+                                    ></textarea>
+                                    <button type="submit" class="cronicle-send-button">
+                                        <?php _e('Send', 'cronicle'); ?>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                         
-                        <div class="cronicle-typing-indicator">
-                            <?php _e('Assistant is typing...', 'cronicle'); ?>
-                        </div>
-                        
-                        <div class="cronicle-input-area">
-                            <form class="cronicle-input-form">
-                                <textarea 
-                                    class="cronicle-input" 
-                                    placeholder="<?php esc_attr_e('What would you like to write about? (e.g., benefits of exercise, cooking tips, travel destinations)', 'cronicle'); ?>"
-                                    rows="1"
-                                ></textarea>
-                                <button type="submit" class="cronicle-send-button">
-                                    <?php _e('Send', 'cronicle'); ?>
-                                </button>
-                            </form>
+                        <div class="cronicle-preview-container">
+                            <div class="cronicle-preview-header">
+                                <?php _e('Post Preview', 'cronicle'); ?>
+                            </div>
+                            <div class="cronicle-preview-content">
+                                <!-- Preview content will be populated by JavaScript -->
+                            </div>
+                            <div class="cronicle-preview-actions">
+                                <!-- Preview actions will be populated by JavaScript -->
+                            </div>
                         </div>
                     </div>
                 <?php endif; ?>
