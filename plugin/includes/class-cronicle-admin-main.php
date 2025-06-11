@@ -491,20 +491,20 @@ class Cronicle_Admin_Main {
      * Build structured prompt for post generation
      */
     private function build_post_generation_prompt($topic) {
-        return 'I need you to write a WordPress blog post about: "' . $topic . '"
+        return 'You are an expert blogger. Draft a new blog post about: "' . $topic . '"
 
 Please respond with valid JSON in this exact format:
 
 {
     "chat_response": "A friendly message about the post you created (e.g., \'I\'ve created a new post titled \"Benefits of Morning Exercise\" with 487 words. The post covers key health benefits and practical tips to get started.\')",
     "post_title": "An engaging, SEO-friendly title for the post",
-    "post_content": "The complete blog post content in WordPress block format using HTML. Structure it with proper headings (h2, h3), paragraphs, and lists as appropriate. Make it informative, engaging, and well-organized.",
+    "post_content": "The complete blog post content in WordPress block syntax. Structure it with proper headings (h2, h3), paragraphs, and lists as appropriate. Make it informative, engaging, and well-organized.",
     "word_count": 500
 }
 
 Requirements:
 - The post should be 400-600 words
-- Use proper HTML structure with headings and paragraphs
+- Format all post content using WordPress block HTML (e.g., <!-- wp:paragraph -->)
 - Make it engaging and informative
 - Include practical tips or actionable advice where relevant
 - Ensure the content is original and valuable to readers
