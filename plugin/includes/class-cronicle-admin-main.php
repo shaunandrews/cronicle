@@ -24,6 +24,7 @@ class Cronicle_Admin_Main {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('wp_ajax_cronicle_chat_message', array($this, 'handle_chat_message'));
+        add_action('wp_ajax_cronicle_create_post', array($this, 'create_draft_post'));
     }
     
     /**
@@ -83,6 +84,9 @@ class Cronicle_Admin_Main {
                 'sending' => __('Sending...', 'cronicle'),
                 'error' => __('Error sending message. Please try again.', 'cronicle'),
                 'api_not_configured' => __('API not configured. Please add your Anthropic API key in Settings.', 'cronicle'),
+                'creating_post' => __('Creating Draft...', 'cronicle'),
+                'post_created' => __('✓ Draft Created', 'cronicle'),
+                'create_post' => __('Create Draft Post', 'cronicle'),
             )
         ));
     }
@@ -226,6 +230,30 @@ class Cronicle_Admin_Main {
                 font-style: italic;
                 padding: 10px 0;
             }
+            .cronicle-create-post-btn {
+                margin-top: 12px;
+                padding: 8px 16px;
+                background: #00a32a;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 600;
+                transition: background-color 0.2s;
+            }
+            .cronicle-create-post-btn:hover:not(:disabled) {
+                background: #008a20;
+            }
+            .cronicle-create-post-btn:disabled {
+                background: #c3c4c7;
+                cursor: not-allowed;
+            }
+            .cronicle-post-actions {
+                margin-top: 12px;
+                padding-top: 8px;
+                border-top: 1px solid #e0e0e0;
+            }
             @media (max-width: 782px) {
                 .cronicle-container {
                     margin: 10px;
@@ -278,7 +306,7 @@ class Cronicle_Admin_Main {
                         },
                         success: function(response) {
                             if (response.success && response.data.content) {
-                                addMessage("assistant", response.data.content);
+                                addMessage("assistant", response.data.content, response.data);
                             } else {
                                 var errorMsg = response.data && response.data.message 
                                     ? response.data.message 
@@ -312,9 +340,24 @@ class Cronicle_Admin_Main {
                 });
                 
                 // Add message to chat
-                function addMessage(type, content) {
+                function addMessage(type, content, data) {
+                    data = data || {};
+                    
                     var $message = $("<div>").addClass("cronicle-message").addClass(type);
                     var $content = $("<div>").addClass("cronicle-message-content").text(content);
+                    
+                    // Add post creation button if this is post content
+                    if (data.is_post_content && data.post_data) {
+                        var $actions = $("<div>").addClass("cronicle-post-actions");
+                        var $button = $("<button>")
+                            .addClass("cronicle-create-post-btn")
+                            .text("Create Draft Post")
+                            .data("post-data", data.post_data);
+                        
+                        $actions.append($button);
+                        $content.append($actions);
+                    }
+                    
                     $message.append($content);
                     $messages.append($message);
                     
@@ -324,6 +367,58 @@ class Cronicle_Admin_Main {
                     // Scroll to bottom
                     $messages.scrollTop($messages[0].scrollHeight);
                 }
+                
+                // Handle post creation button clicks
+                $(document).on("click", ".cronicle-create-post-btn", function() {
+                    var $btn = $(this);
+                    var postData = $btn.data("post-data");
+                    
+                    if (!postData || !postData.title || !postData.content) {
+                        alert("Error: Invalid post data");
+                        return;
+                    }
+                    
+                    $btn.prop("disabled", true).text("Creating Draft...");
+                    
+                    $.ajax({
+                        url: cronicle_ajax.ajax_url,
+                        type: "POST",
+                        data: {
+                            action: "cronicle_create_post",
+                            title: postData.title,
+                            content: postData.content,
+                            nonce: cronicle_ajax.nonce
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                $btn.text("✓ Draft Created").removeClass("cronicle-create-post-btn").addClass("button-secondary");
+                                
+                                // Add success message
+                                setTimeout(function() {
+                                    addMessage("assistant", response.data.message + " Click here to edit it.");
+                                    
+                                    // Add edit button
+                                    var $editBtn = $("<button>")
+                                        .addClass("button button-primary")
+                                        .text("Edit Post")
+                                        .css("margin-top", "8px")
+                                        .on("click", function() {
+                                            window.open(response.data.edit_url, "_blank");
+                                        });
+                                    
+                                    $messages.find(".cronicle-message:last .cronicle-message-content").append($("<br>")).append($editBtn);
+                                }, 1000);
+                            } else {
+                                alert("Error creating post: " + (response.data?.message || "Unknown error"));
+                                $btn.prop("disabled", false).text("Create Draft Post");
+                            }
+                        },
+                        error: function() {
+                            alert("Error creating post. Please try again.");
+                            $btn.prop("disabled", false).text("Create Draft Post");
+                        }
+                    });
+                });
                 
                 // Focus input on load
                 $input.focus();
@@ -360,10 +455,13 @@ class Cronicle_Admin_Main {
             ));
         }
         
-        // Generate response using Claude Sonnet 4
-        $response = $api_client->generate_content($message, array(
+        // Create structured prompt for blog post generation
+        $structured_prompt = $this->build_post_generation_prompt($message);
+        
+        // Generate response using Claude
+        $response = $api_client->generate_content($structured_prompt, array(
             'model' => 'claude-3-7-sonnet-20250219',
-            'max_tokens' => 2000,
+            'max_tokens' => 4000,
             'temperature' => 0.7,
         ));
         
@@ -372,10 +470,119 @@ class Cronicle_Admin_Main {
         }
         
         if (isset($response['content'][0]['text'])) {
-            wp_send_json_success(array('content' => $response['content'][0]['text']));
+            $ai_response = $response['content'][0]['text'];
+            $parsed_response = $this->parse_ai_response($ai_response);
+            
+            if ($parsed_response) {
+                wp_send_json_success($parsed_response);
+            } else {
+                // Fallback if JSON parsing fails
+                wp_send_json_success(array(
+                    'content' => $ai_response,
+                    'is_post_content' => false
+                ));
+            }
         } else {
             wp_send_json_error(array('message' => __('Unexpected response format from API.', 'cronicle')));
         }
+    }
+    
+    /**
+     * Build structured prompt for post generation
+     */
+    private function build_post_generation_prompt($topic) {
+        return 'I need you to write a WordPress blog post about: "' . $topic . '"
+
+Please respond with valid JSON in this exact format:
+
+{
+    "chat_response": "A friendly message about the post you created (e.g., \'I\'ve created a new post titled \"Benefits of Morning Exercise\" with 487 words. The post covers key health benefits and practical tips to get started.\')",
+    "post_title": "An engaging, SEO-friendly title for the post",
+    "post_content": "The complete blog post content in WordPress block format using HTML. Structure it with proper headings (h2, h3), paragraphs, and lists as appropriate. Make it informative, engaging, and well-organized.",
+    "word_count": 500
+}
+
+Requirements:
+- The post should be 400-600 words
+- Use proper HTML structure with headings and paragraphs
+- Make it engaging and informative
+- Include practical tips or actionable advice where relevant
+- Ensure the content is original and valuable to readers
+- The chat_response should be conversational and mention the post title and word count
+
+Please respond ONLY with the JSON, no additional text before or after.';
+    }
+    
+    /**
+     * Parse AI response and extract structured data
+     */
+    private function parse_ai_response($response) {
+        // Clean up the response - remove any markdown code blocks
+        $response = preg_replace('/^```json\s*/', '', $response);
+        $response = preg_replace('/\s*```$/', '', $response);
+        $response = trim($response);
+        
+        $parsed = json_decode($response, true);
+        
+        if (json_last_error() === JSON_ERROR_NONE && isset($parsed['chat_response']) && isset($parsed['post_content'])) {
+            return array(
+                'content' => $parsed['chat_response'],
+                'is_post_content' => true,
+                'post_data' => array(
+                    'title' => isset($parsed['post_title']) ? $parsed['post_title'] : 'Untitled Post',
+                    'content' => $parsed['post_content'],
+                    'word_count' => isset($parsed['word_count']) ? $parsed['word_count'] : null
+                )
+            );
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Create draft post from AI-generated content
+     */
+    public function create_draft_post() {
+        // Check nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'cronicle_chat_nonce')) {
+            wp_die('Security check failed');
+        }
+        
+        // Check permissions
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(array('message' => __('You do not have permission to create posts.', 'cronicle')));
+        }
+        
+        $post_title = sanitize_text_field($_POST['title']);
+        $post_content = wp_kses_post($_POST['content']);
+        
+        if (empty($post_title) || empty($post_content)) {
+            wp_send_json_error(array('message' => __('Post title and content are required.', 'cronicle')));
+        }
+        
+        $post_data = array(
+            'post_title' => $post_title,
+            'post_content' => $post_content,
+            'post_status' => 'draft',
+            'post_author' => get_current_user_id(),
+            'post_type' => 'post',
+            'meta_input' => array(
+                '_cronicle_generated' => true,
+                '_cronicle_generated_date' => current_time('mysql')
+            )
+        );
+        
+        $post_id = wp_insert_post($post_data);
+        
+        if (is_wp_error($post_id)) {
+            wp_send_json_error(array('message' => __('Failed to create draft post.', 'cronicle')));
+        }
+        
+        wp_send_json_success(array(
+            'post_id' => $post_id,
+            'edit_url' => admin_url("post.php?post={$post_id}&action=edit"),
+            'message' => __('Draft post created successfully!', 'cronicle')
+        ));
     }
     
     /**
@@ -416,7 +623,7 @@ class Cronicle_Admin_Main {
                         <div class="cronicle-messages">
                             <div class="cronicle-message assistant">
                                 <div class="cronicle-message-content">
-                                    <?php _e('Hello! I\'m your AI writing assistant. I can help you brainstorm ideas, write content, edit drafts, and more. What would you like to work on today?', 'cronicle'); ?>
+                                    <?php _e('Hello! I\'m ready to help you write blog posts. Just tell me what topic you\'d like to write about, and I\'ll create a draft post for your WordPress site. What would you like to write about today?', 'cronicle'); ?>
                                 </div>
                             </div>
                             <div style="clear: both;"></div>
@@ -430,7 +637,7 @@ class Cronicle_Admin_Main {
                             <form class="cronicle-input-form">
                                 <textarea 
                                     class="cronicle-input" 
-                                    placeholder="<?php esc_attr_e('Type your message here... (Shift+Enter for new line)', 'cronicle'); ?>"
+                                    placeholder="<?php esc_attr_e('What would you like to write about? (e.g., benefits of exercise, cooking tips, travel destinations)', 'cronicle'); ?>"
                                     rows="1"
                                 ></textarea>
                                 <button type="submit" class="cronicle-send-button">
