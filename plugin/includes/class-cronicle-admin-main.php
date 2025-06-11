@@ -87,6 +87,9 @@ class Cronicle_Admin_Main {
                 'creating_post' => __('Creating Draft...', 'cronicle'),
                 'post_created' => __('✓ Draft Created', 'cronicle'),
                 'create_post' => __('Create Draft Post', 'cronicle'),
+                'creating_outline' => __('Creating Outline...', 'cronicle'),
+                'outline_created' => __('✓ Outline Created', 'cronicle'),
+                'create_outline' => __('Create Outline Draft', 'cronicle'),
             )
         ));
     }
@@ -110,11 +113,44 @@ class Cronicle_Admin_Main {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                flex-wrap: wrap;
+                gap: 15px;
             }
             .cronicle-header h1 {
                 margin: 0;
                 font-size: 23px;
                 color: #23282d;
+            }
+            .cronicle-header-right {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+            .cronicle-mode-selector {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .cronicle-mode-selector label {
+                font-size: 14px;
+                font-weight: 600;
+                color: #23282d;
+                margin: 0;
+            }
+            .cronicle-mode-select {
+                padding: 6px 12px;
+                border: 1px solid #c3c4c7;
+                border-radius: 4px;
+                background: #fff;
+                font-size: 14px;
+                color: #23282d;
+                cursor: pointer;
+                min-width: 120px;
+            }
+            .cronicle-mode-select:focus {
+                border-color: #0073aa;
+                outline: none;
+                box-shadow: 0 0 0 1px #0073aa;
             }
             .cronicle-status {
                 padding: 5px 12px;
@@ -258,6 +294,28 @@ class Cronicle_Admin_Main {
                 .cronicle-container {
                     margin: 10px;
                 }
+                .cronicle-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 10px;
+                }
+                .cronicle-header-right {
+                    width: 100%;
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 10px;
+                }
+                .cronicle-mode-selector {
+                    justify-content: space-between;
+                }
+                .cronicle-mode-select {
+                    min-width: auto;
+                    flex: 1;
+                    max-width: 200px;
+                }
+                .cronicle-status {
+                    align-self: flex-end;
+                }
                 .cronicle-message {
                     max-width: 95%;
                 }
@@ -279,6 +337,7 @@ class Cronicle_Admin_Main {
                 var $button = $(".cronicle-send-button");
                 var $messages = $(".cronicle-messages");
                 var $typing = $(".cronicle-typing-indicator");
+                var $modeSelect = $(".cronicle-mode-select");
                 
                 // Handle form submission
                 $form.on("submit", function(e) {
@@ -295,6 +354,9 @@ class Cronicle_Admin_Main {
                     $button.prop("disabled", true).text(cronicle_ajax.strings.sending);
                     $typing.show();
                     
+                    // Get selected mode
+                    var selectedMode = $modeSelect.val() || "draft";
+                    
                     // Send AJAX request
                     $.ajax({
                         url: cronicle_ajax.ajax_url,
@@ -302,6 +364,7 @@ class Cronicle_Admin_Main {
                         data: {
                             action: "cronicle_chat_message",
                             message: message,
+                            mode: selectedMode,
                             nonce: cronicle_ajax.nonce
                         },
                         success: function(response) {
@@ -349,9 +412,10 @@ class Cronicle_Admin_Main {
                     // Add post creation button if this is post content
                     if (data.is_post_content && data.post_data) {
                         var $actions = $("<div>").addClass("cronicle-post-actions");
+                        var buttonText = data.post_data.is_outline ? "Create Outline Draft" : "Create Draft Post";
                         var $button = $("<button>")
                             .addClass("cronicle-create-post-btn")
-                            .text("Create Draft Post")
+                            .text(buttonText)
                             .data("post-data", data.post_data);
                         
                         $actions.append($button);
@@ -378,7 +442,8 @@ class Cronicle_Admin_Main {
                         return;
                     }
                     
-                    $btn.prop("disabled", true).text("Creating Draft...");
+                    var creatingText = postData.is_outline ? cronicle_ajax.strings.creating_outline : cronicle_ajax.strings.creating_post;
+                    $btn.prop("disabled", true).text(creatingText);
                     
                     $.ajax({
                         url: cronicle_ajax.ajax_url,
@@ -391,7 +456,8 @@ class Cronicle_Admin_Main {
                         },
                         success: function(response) {
                             if (response.success) {
-                                $btn.text("✓ Draft Created").removeClass("cronicle-create-post-btn").addClass("button-secondary");
+                                var createdText = postData.is_outline ? cronicle_ajax.strings.outline_created : cronicle_ajax.strings.post_created;
+                                $btn.text(createdText).removeClass("cronicle-create-post-btn").addClass("button-secondary");
                                 
                                 // Add success message
                                 setTimeout(function() {
@@ -410,14 +476,26 @@ class Cronicle_Admin_Main {
                                 }, 1000);
                             } else {
                                 alert("Error creating post: " + (response.data?.message || "Unknown error"));
-                                $btn.prop("disabled", false).text("Create Draft Post");
+                                var originalText = postData.is_outline ? cronicle_ajax.strings.create_outline : cronicle_ajax.strings.create_post;
+                                $btn.prop("disabled", false).text(originalText);
                             }
                         },
                         error: function() {
                             alert("Error creating post. Please try again.");
-                            $btn.prop("disabled", false).text("Create Draft Post");
+                            var originalText = postData.is_outline ? cronicle_ajax.strings.create_outline : cronicle_ajax.strings.create_post;
+                            $btn.prop("disabled", false).text(originalText);
                         }
                     });
+                });
+                
+                // Handle mode selector change
+                $modeSelect.on("change", function() {
+                    var mode = $(this).val();
+                    if (mode === "outline") {
+                        $input.attr("placeholder", "What topic would you like an outline for? (e.g., benefits of exercise, cooking tips, travel destinations)");
+                    } else {
+                        $input.attr("placeholder", "What would you like to write about? (e.g., benefits of exercise, cooking tips, travel destinations)");
+                    }
                 });
                 
                 // Focus input on load
@@ -441,6 +519,8 @@ class Cronicle_Admin_Main {
         }
         
         $message = sanitize_textarea_field($_POST['message']);
+        $mode = sanitize_text_field($_POST['mode']) ?: 'draft';
+        
         if (empty($message)) {
             wp_send_json_error(array('message' => __('Message cannot be empty.', 'cronicle')));
         }
@@ -456,7 +536,7 @@ class Cronicle_Admin_Main {
         }
         
         // Create structured prompt for blog post generation
-        $structured_prompt = $this->build_post_generation_prompt($message);
+        $structured_prompt = $this->build_post_generation_prompt($message, $mode);
         
         // Generate response using Claude
         $response = $api_client->generate_content($structured_prompt, array(
@@ -490,7 +570,31 @@ class Cronicle_Admin_Main {
     /**
      * Build structured prompt for post generation
      */
-    private function build_post_generation_prompt($topic) {
+    private function build_post_generation_prompt($topic, $mode = 'draft') {
+        if ($mode === 'outline') {
+            return 'You are an expert blogger. Create a detailed outline for a blog post about: "' . $topic . '"
+
+Respond with valid JSON in this exact format:
+
+{
+    "chat_response": "A friendly message about the outline you created (e.g., \'I\'ve created a detailed outline for \"Benefits of Morning Exercise\" with 6 main sections and key talking points. This gives you a solid structure to build your post around.\')",
+    "post_title": "An engaging, SEO-friendly title for the post",
+    "post_content": "A structured outline in WordPress block syntax with headings and brief bullet points. Use h2 for main sections, h3 for subsections, and bullet lists for key points. Keep it concise but comprehensive.",
+    "word_count": 150
+}
+
+Requirements:
+- Create a detailed outline with 4-6 main sections
+- Include brief bullet points under each section (2-4 points per section)
+- Format using WordPress block HTML (e.g., <!-- wp:heading -->)
+- Focus on structure and key talking points, not full content
+- Make it actionable and logical flow
+- The chat_response should mention it\'s an outline and how many sections
+
+Respond ONLY with the JSON, no additional text before or after.';
+        }
+        
+        // Default draft mode
         return 'You are an expert blogger. Draft a new blog post about: "' . $topic . '"
 
 Respond with valid JSON in this exact format:
@@ -525,13 +629,17 @@ Respond ONLY with the JSON, no additional text before or after.';
         $parsed = json_decode($response, true);
         
         if (json_last_error() === JSON_ERROR_NONE && isset($parsed['chat_response']) && isset($parsed['post_content'])) {
+            // Determine if this is an outline based on word count (outlines are typically shorter)
+            $is_outline = isset($parsed['word_count']) && $parsed['word_count'] < 300;
+            
             return array(
                 'content' => $parsed['chat_response'],
                 'is_post_content' => true,
                 'post_data' => array(
                     'title' => isset($parsed['post_title']) ? $parsed['post_title'] : 'Untitled Post',
                     'content' => $parsed['post_content'],
-                    'word_count' => isset($parsed['word_count']) ? $parsed['word_count'] : null
+                    'word_count' => isset($parsed['word_count']) ? $parsed['word_count'] : null,
+                    'is_outline' => $is_outline
                 )
             );
         }
@@ -601,9 +709,20 @@ Respond ONLY with the JSON, no additional text before or after.';
             <div class="cronicle-container">
                 <div class="cronicle-header">
                     <h1><?php _e('Cronicle AI Assistant', 'cronicle'); ?></h1>
-                    <span class="cronicle-status <?php echo $is_api_configured ? 'connected' : 'disconnected'; ?>">
-                        <?php echo $is_api_configured ? __('Connected', 'cronicle') : __('Not Connected', 'cronicle'); ?>
-                    </span>
+                    <div class="cronicle-header-right">
+                        <?php if ($is_api_configured): ?>
+                        <div class="cronicle-mode-selector">
+                            <label for="cronicle-mode-select"><?php _e('Mode:', 'cronicle'); ?></label>
+                            <select id="cronicle-mode-select" class="cronicle-mode-select">
+                                <option value="draft"><?php _e('Full Draft', 'cronicle'); ?></option>
+                                <option value="outline"><?php _e('Outline', 'cronicle'); ?></option>
+                            </select>
+                        </div>
+                        <?php endif; ?>
+                        <span class="cronicle-status <?php echo $is_api_configured ? 'connected' : 'disconnected'; ?>">
+                            <?php echo $is_api_configured ? __('Connected', 'cronicle') : __('Not Connected', 'cronicle'); ?>
+                        </span>
+                    </div>
                 </div>
                 
                 <?php if (!$is_api_configured): ?>
@@ -623,7 +742,7 @@ Respond ONLY with the JSON, no additional text before or after.';
                         <div class="cronicle-messages">
                             <div class="cronicle-message assistant">
                                 <div class="cronicle-message-content">
-                                    <?php _e('Hello! I\'m ready to help you write blog posts. Just tell me what topic you\'d like to write about, and I\'ll create a draft post for your WordPress site. What would you like to write about today?', 'cronicle'); ?>
+                                    <?php _e('Hello! I\'m ready to help you with your blog posts. Choose "Full Draft" mode for a complete ready-to-publish post, or "Outline" mode for a structured outline that you can expand yourself. Just tell me what topic you\'d like to work on!', 'cronicle'); ?>
                                 </div>
                             </div>
                             <div style="clear: both;"></div>
