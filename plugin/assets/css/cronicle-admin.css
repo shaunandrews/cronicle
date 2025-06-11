@@ -181,6 +181,27 @@
     align-items: center;
 }
 
+.cronicle-preview-revise-btn {
+    padding: 8px 16px;
+    background: #0073aa;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.cronicle-preview-revise-btn:hover:not(:disabled) {
+    background: #005a87;
+}
+
+.cronicle-preview-revise-btn:disabled {
+    background: #c3c4c7;
+    cursor: not-allowed;
+}
+
 .cronicle-preview-create-btn {
     padding: 8px 16px;
     background: #00a32a;

@@ -148,19 +148,35 @@ jQuery(document).ready(function($) {
         // Update action buttons
         var createButtonText = isOutline ? "Create Outline Draft" : "Create Draft Post";
         var $createBtn = $previewActions.find(".cronicle-preview-create-btn");
+        var $reviseBtn = $previewActions.find(".cronicle-preview-revise-btn");
         if ($createBtn.length === 0) {
             $createBtn = $("<button>").addClass("cronicle-preview-create-btn");
-            var $closeBtn = $("<button>").addClass("cronicle-preview-close-btn").text("Close Preview");
-            
-            $previewActions.empty().append($createBtn).append($closeBtn);
-            
-            // Handle close button
+            $reviseBtn = $("<button>")
+                .addClass("cronicle-preview-revise-btn")
+                .text(cronicle_ajax.strings.revise);
+            var $closeBtn = $("<button>")
+                .addClass("cronicle-preview-close-btn")
+                .text("Close Preview");
+
+            $previewActions
+                .empty()
+                .append($createBtn)
+                .append($reviseBtn)
+                .append($closeBtn);
+
             $closeBtn.on("click", function() {
                 $previewContainer.removeClass("active");
             });
+
+            $reviseBtn.on("click", function() {
+                requestRevision($(this).data("post-data"));
+            });
         }
-        
+
         $createBtn.text(createButtonText).data("post-data", postData);
+        if ($reviseBtn.length) {
+            $reviseBtn.data("post-data", postData);
+        }
         
         // Show preview container
         $previewContainer.addClass("active");
@@ -213,6 +229,50 @@ jQuery(document).ready(function($) {
         }
         
         return result;
+    }
+
+    function requestRevision(postData) {
+        if (!postData || !postData.title || !postData.content) {
+            return;
+        }
+
+        var instructions = prompt("How should I revise this draft?");
+        if (!instructions) {
+            return;
+        }
+
+        var $reviseBtn = $previewActions.find(".cronicle-preview-revise-btn");
+        $reviseBtn.prop("disabled", true).text(cronicle_ajax.strings.revising);
+
+        $.ajax({
+            url: cronicle_ajax.ajax_url,
+            type: "POST",
+            data: {
+                action: "cronicle_revise_draft",
+                title: postData.title,
+                content: postData.content,
+                instructions: instructions,
+                nonce: cronicle_ajax.nonce
+            },
+            success: function(response) {
+                if (response.success && response.data.post_data) {
+                    postData.title = response.data.post_data.title;
+                    postData.content = response.data.post_data.content;
+                    postData.is_outline = response.data.post_data.is_outline;
+                    postData.word_count = response.data.post_data.word_count;
+                    addMessage("assistant", response.data.content, response.data);
+                    showPreview(postData);
+                } else {
+                    alert("Error: " + (response.data?.message || cronicle_ajax.strings.error));
+                }
+            },
+            error: function() {
+                alert("Error: " + cronicle_ajax.strings.error);
+            },
+            complete: function() {
+                $reviseBtn.prop("disabled", false).text(cronicle_ajax.strings.revise);
+            }
+        });
     }
     
     // Handle post creation button clicks (both in chat and preview)

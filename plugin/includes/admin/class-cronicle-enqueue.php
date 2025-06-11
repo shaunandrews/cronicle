@@ -64,6 +64,8 @@ class Cronicle_Enqueue {
                 'creating_outline' => __('Creating Outline...', 'cronicle'),
                 'outline_created' => __('✓ Outline Created', 'cronicle'),
                 'create_outline' => __('Create Outline Draft', 'cronicle'),
+                'revise' => __('Request Revision', 'cronicle'),
+                'revising' => __('Revising...', 'cronicle'),
             )
         ));
     }

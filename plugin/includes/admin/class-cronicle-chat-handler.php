@@ -18,6 +18,7 @@ class Cronicle_Chat_Handler {
     public function register_hooks() {
         add_action('wp_ajax_cronicle_chat_message', array($this, 'handle_chat_message'));
         add_action('wp_ajax_cronicle_create_post', array($this, 'create_draft_post'));
+        add_action('wp_ajax_cronicle_revise_draft', array($this, 'revise_draft_post'));
     }
     
     /**
@@ -299,6 +300,40 @@ Respond ONLY with the JSON, no additional text before or after.';
         
         return false;
     }
+
+    /**
+     * Build structured prompt for revising an existing draft
+     */
+    private function build_revision_prompt($title, $content, $instructions, $site_context = null, $user_context = null) {
+        $context_info = $this->build_context_section($site_context, $user_context);
+
+        return 'You are an expert editor. Revise the following blog post according to the user\'s instructions.
+
+POST TITLE: "' . $title . '"
+
+POST CONTENT:
+' . $content . '
+
+REVISION REQUEST: ' . $instructions . '
+
+' . $context_info . '
+
+Respond with valid JSON in this exact format:
+
+{
+    "chat_response": "A friendly message about the revisions you made",
+    "post_title": "The revised post title",
+    "post_content": "The revised post content in WordPress block syntax",
+    "word_count": 500
+}
+
+Requirements:
+- Keep the post between 400-600 words
+- Format using WordPress block HTML (e.g., <!-- wp:paragraph -->)
+- Apply the revision request accurately
+
+Respond ONLY with the JSON, no additional text before or after.';
+    }
     
     /**
      * Create draft post from AI-generated content
@@ -345,4 +380,62 @@ Respond ONLY with the JSON, no additional text before or after.';
             'message' => __('Draft post created successfully!', 'cronicle')
         ));
     }
-} 
+
+    /**
+     * Revise AI-generated draft based on user instructions
+     */
+    public function revise_draft_post() {
+        if (!wp_verify_nonce($_POST['nonce'], 'cronicle_chat_nonce')) {
+            wp_die('Security check failed');
+        }
+
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(array('message' => __('You do not have permission to use this feature.', 'cronicle')));
+        }
+
+        $title = sanitize_text_field($_POST['title']);
+        $content = wp_kses_post($_POST['content']);
+        $instructions = sanitize_textarea_field($_POST['instructions']);
+
+        if (empty($title) || empty($content) || empty($instructions)) {
+            wp_send_json_error(array('message' => __('Invalid revision data.', 'cronicle')));
+        }
+
+        $api_client = cronicle_api_client();
+
+        if (!$api_client->is_api_ready()) {
+            wp_send_json_error(array(
+                'message' => __('API not configured. Please add your Anthropic API key in Settings.', 'cronicle'),
+                'redirect_to_settings' => true
+            ));
+        }
+
+        $site_context = $this->get_site_context();
+        $user_context = $this->get_user_context();
+
+        $prompt = $this->build_revision_prompt($title, $content, $instructions, $site_context, $user_context);
+
+        $response = $api_client->generate_content($prompt, array(
+            'model' => 'claude-3-5-sonnet-20241022',
+            'max_tokens' => 4000,
+            'temperature' => 0.7,
+        ));
+
+        if (is_wp_error($response)) {
+            wp_send_json_error(array('message' => $response->get_error_message()));
+        }
+
+        if (isset($response['content'][0]['text'])) {
+            $ai_response = $response['content'][0]['text'];
+            $parsed = $this->parse_ai_response($ai_response);
+
+            if ($parsed) {
+                wp_send_json_success($parsed);
+            } else {
+                wp_send_json_error(array('message' => __('Unexpected response format from API.', 'cronicle')));
+            }
+        } else {
+            wp_send_json_error(array('message' => __('Unexpected response format from API.', 'cronicle')));
+        }
+    }
+}
