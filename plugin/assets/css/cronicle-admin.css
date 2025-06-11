@@ -10,6 +10,10 @@
     background: #fff;
     border: 1px solid #c3c4c7;
     box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 40px);
+    overflow: hidden;
 }
 
 .cronicle-header {
@@ -87,14 +91,15 @@
 
 .cronicle-main-content {
     display: flex;
-    min-height: 600px;
+    flex: 1;
+    overflow: hidden;
 }
 
 .cronicle-chat-container {
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 600px;
+    overflow: hidden;
 }
 
 .cronicle-preview-container {
@@ -103,6 +108,8 @@
     background: #fff;
     display: none;
     flex-direction: column;
+    max-height: 100%;
+    overflow: hidden;
 }
 
 .cronicle-preview-container.active {
@@ -359,22 +366,23 @@
     .cronicle-main-content {
         flex-direction: column;
     }
-    
+
     .cronicle-preview-container {
         width: 100%;
         border-left: none;
         border-top: 1px solid #c3c4c7;
-        max-height: 400px;
+        max-height: 50vh;
     }
-    
+
     .cronicle-chat-container {
-        min-height: 400px;
+        max-height: 50vh;
     }
 }
 
 @media (max-width: 782px) {
     .cronicle-container {
         margin: 10px;
+        max-height: calc(100vh - 20px);
     }
     
     .cronicle-header {
@@ -413,7 +421,11 @@
     }
     
     .cronicle-preview-container {
-        max-height: 300px;
+        max-height: 40vh;
+    }
+
+    .cronicle-chat-container {
+        max-height: 40vh;
     }
     
     .cronicle-preview-actions {
