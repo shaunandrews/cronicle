@@ -233,6 +233,12 @@ body.toplevel_page_cronicle {
     border-color: #949494;
 }
 
+.cronicle-welcome-message {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+}
+
 .cronicle-messages {
     flex: 1;
     overflow-y: auto;
