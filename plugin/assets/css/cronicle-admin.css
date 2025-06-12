@@ -18,6 +18,38 @@
     overflow: hidden;
 }
 
+/* Overlay for scheduling posts */
+.cronicle-schedule-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100000;
+}
+
+.cronicle-schedule-dialog {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cronicle-schedule-dialog input[type="datetime-local"] {
+    padding: 6px 12px;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+}
+
+.cronicle-schedule-confirm {
+    margin-right: 8px;
+}
+
 /* Avoid page scrolling within the admin area */
 body.toplevel_page_cronicle {
     overflow: hidden;

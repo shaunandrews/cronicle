@@ -144,7 +144,19 @@ jQuery(document).ready(function($) {
                 .addClass("cronicle-create-post-btn")
                 .text(buttonText)
                 .data("post-data", data.post_data);
-            
+
+            var $publishButton = $("<button>")
+                .addClass("button button-primary cronicle-publish-post-btn")
+                .text(cronicle_ajax.strings.publish_post)
+                .css({"margin-left": "8px"})
+                .data("post-data", data.post_data);
+
+            var $scheduleButton = $("<button>")
+                .addClass("button cronicle-schedule-post-btn")
+                .text(cronicle_ajax.strings.schedule_post)
+                .css({"margin-left": "8px"})
+                .data("post-data", data.post_data);
+
             var $previewButton = $("<button>")
                 .addClass("button button-secondary")
                 .text("Preview")
@@ -153,8 +165,12 @@ jQuery(document).ready(function($) {
                 .on("click", function() {
                     showPreview($(this).data("post-data"));
                 });
-            
-            $actions.append($createButton).append($previewButton);
+
+            $actions
+                .append($createButton)
+                .append($publishButton)
+                .append($scheduleButton)
+                .append($previewButton);
             $content.append($actions);
             
             // Auto-show preview for new post content
@@ -201,8 +217,16 @@ jQuery(document).ready(function($) {
         // Update action buttons
         var createButtonText = isOutline ? "Create Outline Draft" : "Create Draft Post";
         var $createBtn = $previewActions.find(".cronicle-preview-create-btn");
+        var $publishBtn = $previewActions.find(".cronicle-preview-publish-btn");
+        var $scheduleBtn = $previewActions.find(".cronicle-preview-schedule-btn");
         if ($createBtn.length === 0) {
             $createBtn = $("<button>").addClass("cronicle-preview-create-btn");
+            $publishBtn = $("<button>")
+                .addClass("button button-primary cronicle-preview-publish-btn")
+                .text(cronicle_ajax.strings.publish_post);
+            $scheduleBtn = $("<button>")
+                .addClass("button cronicle-preview-schedule-btn")
+                .text(cronicle_ajax.strings.schedule_post);
             var $closeBtn = $("<button>")
                 .addClass("cronicle-preview-close-btn")
                 .text("Close Preview");
@@ -210,6 +234,8 @@ jQuery(document).ready(function($) {
             $previewActions
                 .empty()
                 .append($createBtn)
+                .append($publishBtn)
+                .append($scheduleBtn)
                 .append($closeBtn);
 
             $closeBtn.on("click", function() {
@@ -218,6 +244,8 @@ jQuery(document).ready(function($) {
         }
 
         $createBtn.text(createButtonText).data("post-data", postData);
+        $publishBtn.data("post-data", postData);
+        $scheduleBtn.data("post-data", postData);
         
         // Show preview container
         $previewContainer.addClass("active");
@@ -329,6 +357,156 @@ jQuery(document).ready(function($) {
                 var originalText = postData.is_outline ? cronicle_ajax.strings.create_outline : cronicle_ajax.strings.create_post;
                 $btn.prop("disabled", false).text(originalText);
             }
+        });
+    });
+
+    // Handle publish button clicks
+    $(document).on("click", ".cronicle-publish-post-btn, .cronicle-preview-publish-btn", function() {
+        var $btn = $(this);
+        var postData = $btn.data("post-data");
+
+        if (!postData || !postData.title || !postData.content) {
+            alert("Error: Invalid post data");
+            return;
+        }
+
+        $btn.prop("disabled", true).text(cronicle_ajax.strings.publishing_post);
+
+        $.ajax({
+            url: cronicle_ajax.ajax_url,
+            type: "POST",
+            data: {
+                action: "cronicle_publish_post",
+                title: postData.title,
+                content: postData.content,
+                nonce: cronicle_ajax.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    $btn.text(cronicle_ajax.strings.post_published).removeClass("cronicle-publish-post-btn").addClass("button-secondary");
+
+                    setTimeout(function() {
+                        addMessage("assistant", response.data.message + " Click here to view it.");
+
+                        var $viewBtn = $("<button>")
+                            .addClass("button button-primary")
+                            .text("View Post")
+                            .css("margin-top", "8px")
+                            .on("click", function() {
+                                window.open(response.data.view_url, "_blank");
+                            });
+
+                        $messages.find(".cronicle-message:last .cronicle-message-content").append("<br>").append($viewBtn);
+                    }, 1000);
+
+                    currentDraft = null;
+                    $previewContainer.removeClass("active");
+                } else {
+                    alert("Error publishing post: " + (response.data?.message || "Unknown error"));
+                    $btn.prop("disabled", false).text(cronicle_ajax.strings.publish_post);
+                }
+            },
+            error: function() {
+                alert("Error publishing post. Please try again.");
+                $btn.prop("disabled", false).text(cronicle_ajax.strings.publish_post);
+            }
+        });
+    });
+
+    function showScheduleDialog(callback) {
+        var $overlay = $("<div>").addClass("cronicle-schedule-overlay");
+        var $dialog = $("<div>").addClass("cronicle-schedule-dialog");
+
+        var $label = $("<label>").text(cronicle_ajax.strings.enter_datetime);
+        var $input = $("<input>")
+            .attr("type", "datetime-local")
+            .addClass("cronicle-schedule-input");
+        var $confirm = $("<button>")
+            .addClass("button button-primary cronicle-schedule-confirm")
+            .text(cronicle_ajax.strings.schedule_post);
+        var $cancel = $("<button>")
+            .addClass("button cronicle-schedule-cancel")
+            .text("Cancel");
+
+        $dialog.append($label).append($input).append($confirm).append($cancel);
+        $overlay.append($dialog);
+        $("body").append($overlay);
+
+        $input.focus();
+
+        $confirm.on("click", function() {
+            var val = $input.val();
+            if (!val) {
+                alert(cronicle_ajax.strings.enter_datetime);
+                return;
+            }
+            $overlay.remove();
+            callback(val);
+        });
+
+        $cancel.on("click", function() {
+            $overlay.remove();
+            callback(null);
+        });
+    }
+
+    // Handle schedule button clicks
+    $(document).on("click", ".cronicle-schedule-post-btn, .cronicle-preview-schedule-btn", function() {
+        var $btn = $(this);
+        var postData = $btn.data("post-data");
+
+        if (!postData || !postData.title || !postData.content) {
+            alert("Error: Invalid post data");
+            return;
+        }
+
+        showScheduleDialog(function(datetime) {
+            if (!datetime) {
+                return;
+            }
+
+            $btn.prop("disabled", true).text(cronicle_ajax.strings.scheduling_post);
+
+            $.ajax({
+                url: cronicle_ajax.ajax_url,
+                type: "POST",
+                data: {
+                    action: "cronicle_schedule_post",
+                    title: postData.title,
+                    content: postData.content,
+                    scheduled_datetime: datetime,
+                    nonce: cronicle_ajax.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $btn.text(cronicle_ajax.strings.post_scheduled).removeClass("cronicle-schedule-post-btn").addClass("button-secondary");
+
+                        setTimeout(function() {
+                            addMessage("assistant", response.data.message + " Click here to edit it.");
+
+                            var $editBtn = $("<button>")
+                                .addClass("button button-primary")
+                                .text("Edit Post")
+                                .css("margin-top", "8px")
+                                .on("click", function() {
+                                    window.open(response.data.edit_url, "_blank");
+                                });
+
+                            $messages.find(".cronicle-message:last .cronicle-message-content").append("<br>").append($editBtn);
+                        }, 1000);
+
+                        currentDraft = null;
+                        $previewContainer.removeClass("active");
+                    } else {
+                        alert("Error scheduling post: " + (response.data?.message || "Unknown error"));
+                        $btn.prop("disabled", false).text(cronicle_ajax.strings.schedule_post);
+                    }
+                },
+                error: function() {
+                    alert("Error scheduling post. Please try again.");
+                    $btn.prop("disabled", false).text(cronicle_ajax.strings.schedule_post);
+                }
+            });
         });
     });
     
