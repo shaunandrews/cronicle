@@ -88,11 +88,40 @@ jQuery(document).ready(function($) {
         }
     });
     
-    // Auto-resize textarea
-    $input.on("input", function() {
-        this.style.height = "auto";
-        this.style.height = Math.min(this.scrollHeight, 200) + "px";
-    });
+    var maxHeight = 300;
+    function resizeInput() {
+        $input.css("height", "auto");
+
+        var scrollHeight = $input[0].scrollHeight;
+
+        if (!$input.val()) {
+            var $tmp = $("<div>")
+                .css({
+                    position: "absolute",
+                    visibility: "hidden",
+                    padding: $input.css("padding"),
+                    width: $input.outerWidth(),
+                    'font-family': $input.css('font-family'),
+                    'font-size': $input.css('font-size'),
+                    'line-height': $input.css('line-height'),
+                    'white-space': 'pre-wrap',
+                    'word-wrap': 'break-word'
+                })
+                .text($input.attr("placeholder"));
+
+            $("body").append($tmp);
+            scrollHeight = $tmp[0].scrollHeight;
+            $tmp.remove();
+        }
+
+        var newHeight = Math.min(scrollHeight, maxHeight);
+        $input.css({
+            height: newHeight + "px",
+            'overflow-y': scrollHeight > maxHeight ? 'auto' : 'hidden'
+        });
+    }
+
+    $input.on("input", resizeInput);
     
     // Add message to chat
     function addMessage(type, content, data) {
@@ -311,8 +340,10 @@ jQuery(document).ready(function($) {
         } else {
             $input.attr("placeholder", "What would you like to write about? (e.g., benefits of exercise, cooking tips, travel destinations)");
         }
+        resizeInput();
     });
-    
+
     // Focus input on load
+    resizeInput();
     $input.focus();
 }); 
