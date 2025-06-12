@@ -449,4 +449,42 @@ body.toplevel_page_cronicle {
         flex-direction: column;
         align-items: stretch;
     }
-} 
+}
+
+/* Small screen tweaks */
+@media (max-width: 480px) {
+    .cronicle-container {
+        margin: 0;
+        height: 100vh;
+        max-width: 100%;
+        border: none;
+        box-shadow: none;
+    }
+
+    .cronicle-header {
+        padding: 15px;
+    }
+
+    .cronicle-header-right {
+        gap: 8px;
+    }
+
+    .cronicle-input-area {
+        padding: 15px;
+    }
+
+    .cronicle-message {
+        max-width: 100%;
+    }
+
+    .cronicle-input-form,
+    .cronicle-preview-actions {
+        flex-direction: column;
+    }
+
+    .cronicle-send-button,
+    .cronicle-preview-create-btn,
+    .cronicle-preview-close-btn {
+        width: 100%;
+    }
+}
