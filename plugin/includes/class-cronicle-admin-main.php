@@ -1116,14 +1116,10 @@ Respond ONLY with the JSON, no additional text before or after.';
                 <?php else: ?>
                     <div class="cronicle-main-content">
                         <div class="cronicle-chat-container">
-                            <div class="cronicle-messages">
-                                <div class="cronicle-message assistant">
-                                    <div class="cronicle-message-content">
-                                        <?php _e('Hello! I\'m ready to help you with your blog posts. Choose "Full Draft" mode for a complete ready-to-publish post, or "Outline" mode for a structured outline that you can expand yourself. Just tell me what topic you\'d like to work on!', 'cronicle'); ?>
-                                    </div>
-                                </div>
-                                <div style="clear: both;"></div>
+                            <div class="cronicle-welcome-message">
+                                <?php _e('Create a new draft with AI', 'cronicle'); ?>
                             </div>
+                            <div class="cronicle-messages"></div>
                             
                             <div class="cronicle-typing-indicator">
                                 <?php _e('Assistant is typing...', 'cronicle'); ?>

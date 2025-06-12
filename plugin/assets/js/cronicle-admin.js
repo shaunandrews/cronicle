@@ -9,6 +9,7 @@ jQuery(document).ready(function($) {
     var $input = $(".cronicle-input");
     var $button = $(".cronicle-send-button");
     var $messages = $(".cronicle-messages");
+    var $welcomeMessage = $(".cronicle-welcome-message");
     var $typing = $(".cronicle-typing-indicator");
     var $modeSelect = $(".cronicle-mode-select");
     var $previewContainer = $(".cronicle-preview-container");
@@ -96,6 +97,11 @@ jQuery(document).ready(function($) {
     // Add message to chat
     function addMessage(type, content, data) {
         data = data || {};
+
+        // Hide welcome message on first interaction
+        if ($welcomeMessage.length) {
+            $welcomeMessage.hide();
+        }
         
         var $message = $("<div>").addClass("cronicle-message").addClass(type);
         var $content = $("<div>").addClass("cronicle-message-content").text(content);
