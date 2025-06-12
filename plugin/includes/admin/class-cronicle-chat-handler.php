@@ -18,6 +18,8 @@ class Cronicle_Chat_Handler {
     public function register_hooks() {
         add_action('wp_ajax_cronicle_chat_message', array($this, 'handle_chat_message'));
         add_action('wp_ajax_cronicle_create_post', array($this, 'create_draft_post'));
+        add_action('wp_ajax_cronicle_publish_post', array($this, 'publish_post'));
+        add_action('wp_ajax_cronicle_schedule_post', array($this, 'schedule_post'));
         add_action('wp_ajax_cronicle_revise_draft', array($this, 'revise_draft_post'));
     }
     
@@ -378,6 +380,101 @@ Respond ONLY with the JSON, no additional text before or after.';
             'post_id' => $post_id,
             'edit_url' => admin_url("post.php?post={$post_id}&action=edit"),
             'message' => __('Draft post created successfully!', 'cronicle')
+        ));
+    }
+
+    /**
+     * Publish post immediately from AI-generated content
+     */
+    public function publish_post() {
+        if (!wp_verify_nonce($_POST['nonce'], 'cronicle_chat_nonce')) {
+            wp_die('Security check failed');
+        }
+
+        if (!current_user_can('publish_posts')) {
+            wp_send_json_error(array('message' => __('You do not have permission to publish posts.', 'cronicle')));
+        }
+
+        $post_title = sanitize_text_field($_POST['title']);
+        $post_content = wp_kses_post($_POST['content']);
+
+        if (empty($post_title) || empty($post_content)) {
+            wp_send_json_error(array('message' => __('Post title and content are required.', 'cronicle')));
+        }
+
+        $post_data = array(
+            'post_title' => $post_title,
+            'post_content' => $post_content,
+            'post_status' => 'publish',
+            'post_author' => get_current_user_id(),
+            'post_type' => 'post',
+            'meta_input' => array(
+                '_cronicle_generated' => true,
+                '_cronicle_generated_date' => current_time('mysql')
+            )
+        );
+
+        $post_id = wp_insert_post($post_data);
+
+        if (is_wp_error($post_id)) {
+            wp_send_json_error(array('message' => __('Failed to publish post.', 'cronicle')));
+        }
+
+        wp_send_json_success(array(
+            'post_id' => $post_id,
+            'view_url' => get_permalink($post_id),
+            'message' => __('Post published successfully!', 'cronicle')
+        ));
+    }
+
+    /**
+     * Schedule post for future publication
+     */
+    public function schedule_post() {
+        if (!wp_verify_nonce($_POST['nonce'], 'cronicle_chat_nonce')) {
+            wp_die('Security check failed');
+        }
+
+        if (!current_user_can('publish_posts')) {
+            wp_send_json_error(array('message' => __('You do not have permission to schedule posts.', 'cronicle')));
+        }
+
+        $post_title = sanitize_text_field($_POST['title']);
+        $post_content = wp_kses_post($_POST['content']);
+        $datetime = sanitize_text_field($_POST['scheduled_datetime']);
+
+        if (empty($post_title) || empty($post_content) || empty($datetime)) {
+            wp_send_json_error(array('message' => __('Post title, content, and date/time are required.', 'cronicle')));
+        }
+
+        $timestamp = strtotime($datetime);
+        if (!$timestamp) {
+            wp_send_json_error(array('message' => __('Invalid date/time format.', 'cronicle')));
+        }
+
+        $post_data = array(
+            'post_title'   => $post_title,
+            'post_content' => $post_content,
+            'post_status'  => 'future',
+            'post_date'    => date('Y-m-d H:i:s', $timestamp),
+            'post_author'  => get_current_user_id(),
+            'post_type'    => 'post',
+            'meta_input'   => array(
+                '_cronicle_generated' => true,
+                '_cronicle_generated_date' => current_time('mysql')
+            )
+        );
+
+        $post_id = wp_insert_post($post_data);
+
+        if (is_wp_error($post_id)) {
+            wp_send_json_error(array('message' => __('Failed to schedule post.', 'cronicle')));
+        }
+
+        wp_send_json_success(array(
+            'post_id' => $post_id,
+            'edit_url' => admin_url("post.php?post={$post_id}&action=edit"),
+            'message' => __('Post scheduled successfully!', 'cronicle')
         ));
     }
 

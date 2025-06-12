@@ -64,6 +64,13 @@ class Cronicle_Enqueue {
                 'creating_outline' => __('Creating Outline...', 'cronicle'),
                 'outline_created' => __('✓ Outline Created', 'cronicle'),
                 'create_outline' => __('Create Outline Draft', 'cronicle'),
+                'publish_post' => __('Publish Now', 'cronicle'),
+                'publishing_post' => __('Publishing...', 'cronicle'),
+                'post_published' => __('✓ Post Published', 'cronicle'),
+                'schedule_post' => __('Schedule', 'cronicle'),
+                'scheduling_post' => __('Scheduling...', 'cronicle'),
+                'post_scheduled' => __('✓ Post Scheduled', 'cronicle'),
+                'enter_datetime' => __('Enter publish date/time (YYYY-MM-DD HH:MM)', 'cronicle'),
             )
         ));
     }
