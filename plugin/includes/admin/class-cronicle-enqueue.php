@@ -70,7 +70,7 @@ class Cronicle_Enqueue {
                 'schedule_post' => __('Schedule', 'cronicle'),
                 'scheduling_post' => __('Scheduling...', 'cronicle'),
                 'post_scheduled' => __('✓ Post Scheduled', 'cronicle'),
-                'enter_datetime' => __('Enter publish date/time (YYYY-MM-DD HH:MM)', 'cronicle'),
+                'enter_datetime' => __('Select publish date/time', 'cronicle'),
             )
         ));
     }

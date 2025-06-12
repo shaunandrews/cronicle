@@ -378,6 +378,43 @@ jQuery(document).ready(function($) {
         });
     });
 
+    function showScheduleDialog(callback) {
+        var $overlay = $("<div>").addClass("cronicle-schedule-overlay");
+        var $dialog = $("<div>").addClass("cronicle-schedule-dialog");
+
+        var $label = $("<label>").text(cronicle_ajax.strings.enter_datetime);
+        var $input = $("<input>")
+            .attr("type", "datetime-local")
+            .addClass("cronicle-schedule-input");
+        var $confirm = $("<button>")
+            .addClass("button button-primary cronicle-schedule-confirm")
+            .text(cronicle_ajax.strings.schedule_post);
+        var $cancel = $("<button>")
+            .addClass("button cronicle-schedule-cancel")
+            .text("Cancel");
+
+        $dialog.append($label).append($input).append($confirm).append($cancel);
+        $overlay.append($dialog);
+        $("body").append($overlay);
+
+        $input.focus();
+
+        $confirm.on("click", function() {
+            var val = $input.val();
+            if (!val) {
+                alert(cronicle_ajax.strings.enter_datetime);
+                return;
+            }
+            $overlay.remove();
+            callback(val);
+        });
+
+        $cancel.on("click", function() {
+            $overlay.remove();
+            callback(null);
+        });
+    }
+
     // Handle schedule button clicks
     $(document).on("click", ".cronicle-schedule-post-btn, .cronicle-preview-schedule-btn", function() {
         var $btn = $(this);
@@ -388,52 +425,53 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        var datetime = prompt(cronicle_ajax.strings.enter_datetime);
-        if (!datetime) {
-            return;
-        }
+        showScheduleDialog(function(datetime) {
+            if (!datetime) {
+                return;
+            }
 
-        $btn.prop("disabled", true).text(cronicle_ajax.strings.scheduling_post);
+            $btn.prop("disabled", true).text(cronicle_ajax.strings.scheduling_post);
 
-        $.ajax({
-            url: cronicle_ajax.ajax_url,
-            type: "POST",
-            data: {
-                action: "cronicle_schedule_post",
-                title: postData.title,
-                content: postData.content,
-                scheduled_datetime: datetime,
-                nonce: cronicle_ajax.nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    $btn.text(cronicle_ajax.strings.post_scheduled).removeClass("cronicle-schedule-post-btn").addClass("button-secondary");
+            $.ajax({
+                url: cronicle_ajax.ajax_url,
+                type: "POST",
+                data: {
+                    action: "cronicle_schedule_post",
+                    title: postData.title,
+                    content: postData.content,
+                    scheduled_datetime: datetime,
+                    nonce: cronicle_ajax.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $btn.text(cronicle_ajax.strings.post_scheduled).removeClass("cronicle-schedule-post-btn").addClass("button-secondary");
 
-                    setTimeout(function() {
-                        addMessage("assistant", response.data.message + " Click here to edit it.");
+                        setTimeout(function() {
+                            addMessage("assistant", response.data.message + " Click here to edit it.");
 
-                        var $editBtn = $("<button>")
-                            .addClass("button button-primary")
-                            .text("Edit Post")
-                            .css("margin-top", "8px")
-                            .on("click", function() {
-                                window.open(response.data.edit_url, "_blank");
-                            });
+                            var $editBtn = $("<button>")
+                                .addClass("button button-primary")
+                                .text("Edit Post")
+                                .css("margin-top", "8px")
+                                .on("click", function() {
+                                    window.open(response.data.edit_url, "_blank");
+                                });
 
-                        $messages.find(".cronicle-message:last .cronicle-message-content").append("<br>").append($editBtn);
-                    }, 1000);
+                            $messages.find(".cronicle-message:last .cronicle-message-content").append("<br>").append($editBtn);
+                        }, 1000);
 
-                    currentDraft = null;
-                    $previewContainer.removeClass("active");
-                } else {
-                    alert("Error scheduling post: " + (response.data?.message || "Unknown error"));
+                        currentDraft = null;
+                        $previewContainer.removeClass("active");
+                    } else {
+                        alert("Error scheduling post: " + (response.data?.message || "Unknown error"));
+                        $btn.prop("disabled", false).text(cronicle_ajax.strings.schedule_post);
+                    }
+                },
+                error: function() {
+                    alert("Error scheduling post. Please try again.");
                     $btn.prop("disabled", false).text(cronicle_ajax.strings.schedule_post);
                 }
-            },
-            error: function() {
-                alert("Error scheduling post. Please try again.");
-                $btn.prop("disabled", false).text(cronicle_ajax.strings.schedule_post);
-            }
+            });
         });
     });
     
