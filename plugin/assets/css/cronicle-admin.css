@@ -5,39 +5,90 @@
  */
 
 .cronicle-container {
-    max-width: 1200px;
-    margin: 20px auto;
     background: #fff;
-    border: 1px solid #c3c4c7;
-    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    border: none;
+    box-shadow: none;
     display: flex;
     flex-direction: column;
-    /* Subtract WP admin bar (approx. 32px) and vertical margins (40px) */
-    height: calc(100vh - 72px);
+    /* Use full viewport height minus admin bar */
+    height: 100vh;
     box-sizing: border-box;
     overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
 }
 
-/* Avoid page scrolling within the admin area */
+/* Avoid page scrolling and remove WordPress admin padding */
 body.toplevel_page_cronicle {
     overflow: hidden;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Override WordPress .wrap styling */
+body.toplevel_page_cronicle .wrap {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Ensure admin bar stays accessible */
+body.toplevel_page_cronicle #wpadminbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+}
+
+/* Ensure admin menu stays accessible */
+body.toplevel_page_cronicle #adminmenumain {
+    position: fixed;
+    top: 32px;
+    left: 0;
+    bottom: 0;
+    z-index: 9998;
+}
+
+/* Adjust container for admin bar */
+body.toplevel_page_cronicle .cronicle-container {
+    top: 32px;
+    height: calc(100vh - 32px);
+}
+
+/* Adjust for collapsed admin menu */
+body.toplevel_page_cronicle.folded .cronicle-container {
+    left: 36px;
+}
+
+/* Adjust for expanded admin menu */
+body.toplevel_page_cronicle:not(.folded) .cronicle-container {
+    left: 160px;
 }
 
 .cronicle-header {
     background: #f6f7f7;
     border-bottom: 1px solid #c3c4c7;
-    padding: 20px;
+    padding: 12px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 15px;
+    min-height: 56px;
+    flex-shrink: 0;
 }
 
 .cronicle-header h1 {
     margin: 0;
-    font-size: 23px;
+    font-size: 18px;
     color: #23282d;
+    font-weight: 600;
 }
 
 .cronicle-header-right {
@@ -394,12 +445,24 @@ body.toplevel_page_cronicle {
     }
 }
 
+/* Tablet and smaller desktop adjustments */
+@media (max-width: 960px) {
+    body.toplevel_page_cronicle:not(.folded) .cronicle-container {
+        left: 36px;
+    }
+}
+
 @media (max-width: 782px) {
-    .cronicle-container {
-        margin: 10px;
-        /* Account for admin bar (32px) and smaller vertical margin (20px) */
-        height: calc(100vh - 52px);
-        box-sizing: border-box;
+    /* Mobile: admin menu is hidden, only admin bar visible */
+    body.toplevel_page_cronicle .cronicle-container {
+        left: 0 !important;
+        top: 46px;
+        height: calc(100vh - 46px);
+    }
+    
+    /* Mobile admin bar is taller */
+    body.toplevel_page_cronicle #wpadminbar {
+        height: 46px;
     }
     
     .cronicle-header {
