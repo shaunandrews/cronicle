@@ -574,42 +574,21 @@ jQuery(document).ready(function($) {
         
         $content.text(content);
         
-        // Add post creation button and preview if this is post content
+        // Add preview button if this is post content
         if (data.is_post_content && data.post_data) {
             currentDraft = data.post_data;
             var $actions = $("<div>").addClass("cronicle-post-actions");
-            var buttonText = data.post_data.is_outline ? "Create Outline Draft" : "Create Draft Post";
-            var $createButton = $("<button>")
-                .addClass("cronicle-create-post-btn")
-                .text(buttonText)
-                .data("post-data", data.post_data);
-
-            var $publishButton = $("<button>")
-                .addClass("button button-primary cronicle-publish-post-btn")
-                .text(cronicle_ajax.strings.publish_post)
-                .css({"margin-left": "8px"})
-                .data("post-data", data.post_data);
-
-            var $scheduleButton = $("<button>")
-                .addClass("button cronicle-schedule-post-btn")
-                .text(cronicle_ajax.strings.schedule_post)
-                .css({"margin-left": "8px"})
-                .data("post-data", data.post_data);
 
             var $previewButton = $("<button>")
                 .addClass("button button-secondary")
                 .text("Preview")
-                .css({"margin-left": "8px", "padding": "8px 16px", "font-size": "13px"})
+                .css({"padding": "8px 16px", "font-size": "13px"})
                 .data("post-data", data.post_data)
                 .on("click", function() {
                     showPreview($(this).data("post-data"));
                 });
 
-            $actions
-                .append($createButton)
-                .append($publishButton)
-                .append($scheduleButton)
-                .append($previewButton);
+            $actions.append($previewButton);
             $content.append($actions);
             
             // Auto-show preview for new post content (only if this is a new message, not loaded from history)
