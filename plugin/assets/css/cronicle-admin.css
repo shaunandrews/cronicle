@@ -241,6 +241,13 @@ body.toplevel_page_cronicle:not(.folded) .cronicle-container {
     font-weight: 600;
     font-size: 14px;
     color: #23282d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cronicle-preview-title {
+    flex: 1;
 }
 
 .cronicle-preview-content {
@@ -329,19 +336,26 @@ body.toplevel_page_cronicle:not(.folded) .cronicle-container {
 }
 
 .cronicle-preview-close-btn {
-    padding: 8px 16px;
     background: transparent;
+    border: none;
     color: #646970;
-    border: 1px solid #c3c4c7;
-    border-radius: 4px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .cronicle-preview-close-btn:hover {
-    background: #f6f7f7;
-    border-color: #949494;
+    background: rgba(0, 0, 0, 0.1);
+    color: #2c3338;
 }
 
 .cronicle-welcome-message {

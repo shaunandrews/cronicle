@@ -152,7 +152,21 @@ jQuery(document).ready(function($) {
         
         // Update preview header
         var headerText = isOutline ? "Post Outline Preview" : "Post Preview";
-        $previewContainer.find(".cronicle-preview-header").text(headerText);
+        var $previewHeader = $previewContainer.find(".cronicle-preview-header");
+        
+        // Check if header already has proper structure
+        if ($previewHeader.find(".cronicle-preview-title").length === 0) {
+            // Restructure header to include title and close button
+            $previewHeader.empty().append(
+                $("<span>").addClass("cronicle-preview-title").text(headerText),
+                $("<button>").addClass("cronicle-preview-close-btn").html("&times;").on("click", function() {
+                    $previewContainer.removeClass("active");
+                })
+            );
+        } else {
+            // Just update the title text
+            $previewHeader.find(".cronicle-preview-title").text(headerText);
+        }
         
         // Update action buttons
         var createButtonText = isOutline ? "Create Outline Draft" : "Create Draft Post";
@@ -167,20 +181,11 @@ jQuery(document).ready(function($) {
             $scheduleBtn = $("<button>")
                 .addClass("button cronicle-preview-schedule-btn")
                 .text(cronicle_ajax.strings.schedule_post);
-            var $closeBtn = $("<button>")
-                .addClass("cronicle-preview-close-btn")
-                .text("Close Preview");
-
             $previewActions
                 .empty()
                 .append($createBtn)
                 .append($publishBtn)
-                .append($scheduleBtn)
-                .append($closeBtn);
-
-            $closeBtn.on("click", function() {
-                $previewContainer.removeClass("active");
-            });
+                .append($scheduleBtn);
         }
 
         $createBtn.text(createButtonText).data("post-data", postData);
