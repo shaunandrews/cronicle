@@ -10,6 +10,14 @@ const initialState = {
   currentDraft: null,
   currentSessionId: null,
   selectedMode: 'draft',
+  selectedTemplate: 'auto', // Auto-select best template
+  enabledContextProviders: {
+    site: true,
+    user: true,
+    writing_style: true,
+    content: false,
+    conversation: false
+  },
   isTyping: false,
   isSending: false,
   showPreview: false,
@@ -22,6 +30,8 @@ export const ACTIONS = {
   SET_CURRENT_DRAFT: 'SET_CURRENT_DRAFT',
   SET_SESSION_ID: 'SET_SESSION_ID',
   SET_MODE: 'SET_MODE',
+  SET_TEMPLATE: 'SET_TEMPLATE',
+  SET_CONTEXT_PROVIDER: 'SET_CONTEXT_PROVIDER',
   SET_TYPING: 'SET_TYPING',
   SET_SENDING: 'SET_SENDING',
   SET_SHOW_PREVIEW: 'SET_SHOW_PREVIEW',
@@ -56,6 +66,21 @@ const cronicleReducer = (state, action) => {
       return {
         ...state,
         selectedMode: action.payload,
+      };
+    
+    case ACTIONS.SET_TEMPLATE:
+      return {
+        ...state,
+        selectedTemplate: action.payload,
+      };
+    
+    case ACTIONS.SET_CONTEXT_PROVIDER:
+      return {
+        ...state,
+        enabledContextProviders: {
+          ...state.enabledContextProviders,
+          [action.payload.provider]: action.payload.enabled,
+        },
       };
     
     case ACTIONS.SET_TYPING:

@@ -57,6 +57,8 @@ class Cronicle_Chat_Handler {
         
         $message = sanitize_textarea_field($_POST['message']);
         $mode = sanitize_text_field($_POST['mode']) ?: 'draft';
+        $template = sanitize_text_field($_POST['template']) ?: 'auto';
+        $context_providers = isset($_POST['context_providers']) ? $_POST['context_providers'] : array();
         
         if (empty($message)) {
             wp_send_json_error(array('message' => __('Message cannot be empty.', 'cronicle')));
@@ -90,7 +92,7 @@ class Cronicle_Chat_Handler {
         
         // Use new context system if available, otherwise fall back to legacy
         if (function_exists('cronicle_context_manager') && function_exists('cronicle_prompt_template_library')) {
-            $structured_prompt = $this->generate_prompt_with_new_system($message, $mode);
+            $structured_prompt = $this->generate_prompt_with_new_system($message, $mode, $template, $context_providers);
         } else {
             // Legacy fallback
             $site_context = $this->get_site_context();
@@ -676,9 +678,11 @@ Respond ONLY with the JSON, no additional text before or after.';
      * 
      * @param string $message User message
      * @param string $mode Content generation mode
+     * @param string $template Template selection
+     * @param array $context_providers Context provider settings
      * @return string Generated prompt
      */
-    private function generate_prompt_with_new_system($message, $mode) {
+    private function generate_prompt_with_new_system($message, $mode, $template = 'auto', $context_providers = array()) {
         $context_manager = cronicle_context_manager();
         $template_library = cronicle_prompt_template_library();
         $preferences_engine = cronicle_preferences_engine();
@@ -686,34 +690,55 @@ Respond ONLY with the JSON, no additional text before or after.';
         // Get user preferences to determine template and context
         $user_preferences = $preferences_engine->get_user_preferences();
         
-        // Determine the best template based on mode and preferences
-        $template_criteria = array(
-            'mode' => $mode,
-            'category' => $mode === 'outline' ? 'outline' : 'blog_post'
-        );
-        
-        // Add user style preferences to criteria
-        if (isset($user_preferences['writing_style']['tone'])) {
-            $template_criteria['tone'] = $user_preferences['writing_style']['tone'];
+        // Determine template key
+        if ($template === 'auto') {
+            // Auto-select the best template based on mode and preferences
+            $template_criteria = array(
+                'mode' => $mode,
+                'category' => $mode === 'outline' ? 'outline' : 'blog_post'
+            );
+            
+            // Add user style preferences to criteria
+            if (isset($user_preferences['writing_style']['tone'])) {
+                $template_criteria['tone'] = $user_preferences['writing_style']['tone'];
+            }
+            
+            if (isset($user_preferences['content_preferences']['default_content_type'])) {
+                $template_criteria['content_type'] = $user_preferences['content_preferences']['default_content_type'];
+            }
+            
+            // Find the best template
+            $template_key = $template_library->find_best_template($template_criteria);
+            
+            if (is_wp_error($template_key)) {
+                // Fallback to default templates
+                $template_key = $mode === 'outline' ? 'content-outline' : 'blog-post-professional';
+            }
+        } else {
+            // Use user-selected template
+            $template_key = $template;
         }
         
-        if (isset($user_preferences['content_preferences']['default_content_type'])) {
-            $template_criteria['content_type'] = $user_preferences['content_preferences']['default_content_type'];
-        }
-        
-        // Find the best template
-        $template_key = $template_library->find_best_template($template_criteria);
-        
-        if (is_wp_error($template_key)) {
-            // Fallback to default templates
-            $template_key = $mode === 'outline' ? 'content-outline' : 'blog-post-professional';
-        }
-        
-        // Prepare context options
+        // Prepare context options with user-selected providers
         $context_options = array(
             'topic' => $message,
             'mode' => $mode
         );
+        
+        // Apply context provider selections
+        if (!empty($context_providers) && is_array($context_providers)) {
+            // Get enabled providers from user selection
+            $enabled_providers = array();
+            foreach ($context_providers as $provider => $enabled) {
+                if ($enabled === true || $enabled === 'true') {
+                    $enabled_providers[] = $provider;
+                }
+            }
+            
+            if (!empty($enabled_providers)) {
+                $context_options['include_providers'] = $enabled_providers;
+            }
+        }
         
         // Add any additional options from user preferences
         if (isset($user_preferences['writing_style']['preferred_length'])) {

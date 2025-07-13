@@ -586,4 +586,142 @@ body.toplevel_page_cronicle:not(.folded) .cronicle-container {
         flex-direction: column;
         align-items: stretch;
     }
+}
+
+/* Input Area Options */
+.cronicle-input-options {
+    background: #f8f9fa;
+    border: 1px solid #e1e1e1;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    padding: 12px 16px;
+    margin-bottom: 0;
+}
+
+.cronicle-input-options-main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.cronicle-option-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cronicle-option-group label {
+    font-size: 13px;
+    font-weight: 500;
+    margin: 0;
+    color: #555;
+}
+
+.cronicle-input-option-select {
+    font-size: 13px;
+    padding: 2px 6px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background: #fff;
+    min-width: 80px;
+}
+
+.cronicle-options-toggle {
+    font-size: 12px;
+    padding: 2px 8px !important;
+    height: auto !important;
+    line-height: 1.2 !important;
+    margin-left: auto;
+}
+
+.cronicle-input-context-options {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e1e1e1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.cronicle-context-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
+    margin: 0;
+}
+
+.cronicle-context-checkboxes-inline {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.cronicle-context-checkbox-inline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    font-size: 12px;
+    cursor: pointer;
+    color: #666;
+}
+
+.cronicle-context-checkbox-inline input[type="checkbox"] {
+    margin: 0;
+    scale: 0.9;
+}
+
+.cronicle-context-checkbox-inline span {
+    user-select: none;
+}
+
+/* Update input form to connect with options */
+.cronicle-input-form {
+    border-radius: 0 0 4px 4px;
+    border-top: none;
+}
+
+.cronicle-input {
+    border-radius: 0 0 0 4px !important;
+    border-top: none !important;
+}
+
+.cronicle-send-button {
+    border-radius: 0 0 4px 0 !important;
+    border-top: none !important;
+}
+
+/* Responsive adjustments for input options */
+@media (max-width: 768px) {
+    .cronicle-input-options-main {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .cronicle-option-group {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .cronicle-input-option-select {
+        min-width: 120px;
+    }
+    
+    .cronicle-options-toggle {
+        margin-left: 0;
+        align-self: flex-end;
+    }
+    
+    .cronicle-input-context-options {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .cronicle-context-checkboxes-inline {
+        gap: 8px;
+    }
 } 

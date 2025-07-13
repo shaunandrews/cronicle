@@ -11,6 +11,7 @@ import { sendChatMessage, reviseDraft } from '../utils/api';
 const MessageInput = () => {
   const { state, dispatch } = useCronicle();
   const [inputValue, setInputValue] = useState('');
+  const [showOptions, setShowOptions] = useState(false);
   const textareaRef = useRef(null);
 
   const maxHeight = 300;
@@ -100,7 +101,9 @@ const MessageInput = () => {
         // Send new chat message
         response = await sendChatMessage({
           message: message,
-          mode: state.selectedMode || 'draft'
+          mode: state.selectedMode || 'draft',
+          template: state.selectedTemplate || 'auto',
+          context_providers: state.enabledContextProviders
         });
       }
 
@@ -162,8 +165,97 @@ const MessageInput = () => {
     setInputValue(e.target.value);
   };
 
+  const handleModeChange = (e) => {
+    dispatch({ type: ACTIONS.SET_MODE, payload: e.target.value });
+  };
+
+  const handleTemplateChange = (e) => {
+    dispatch({ type: ACTIONS.SET_TEMPLATE, payload: e.target.value });
+  };
+
+  const handleContextProviderChange = (provider) => (e) => {
+    dispatch({ 
+      type: ACTIONS.SET_CONTEXT_PROVIDER, 
+      payload: { provider, enabled: e.target.checked }
+    });
+  };
+
   return (
     <div className="cronicle-input-area">
+      {/* Options Controls */}
+      <div className="cronicle-input-options">
+        <div className="cronicle-input-options-main">
+          {/* Mode Selector */}
+          <div className="cronicle-option-group">
+            <label htmlFor="cronicle-input-mode">
+              {__('Mode:', 'cronicle')}
+            </label>
+            <select 
+              id="cronicle-input-mode" 
+              className="cronicle-input-option-select"
+              value={state.selectedMode || 'draft'}
+              onChange={handleModeChange}
+            >
+              <option value="draft">{__('Full Draft', 'cronicle')}</option>
+              <option value="outline">{__('Outline', 'cronicle')}</option>
+            </select>
+          </div>
+
+          {/* Template Selector */}
+          <div className="cronicle-option-group">
+            <label htmlFor="cronicle-input-template">
+              {__('Template:', 'cronicle')}
+            </label>
+            <select 
+              id="cronicle-input-template" 
+              className="cronicle-input-option-select"
+              value={state.selectedTemplate || 'auto'}
+              onChange={handleTemplateChange}
+            >
+              <option value="auto">{__('Auto', 'cronicle')}</option>
+              <option value="blog-post-professional">{__('Professional', 'cronicle')}</option>
+              <option value="blog-post-casual">{__('Casual', 'cronicle')}</option>
+              <option value="content-outline">{__('Outline', 'cronicle')}</option>
+              <option value="how-to-guide">{__('How-to', 'cronicle')}</option>
+              <option value="listicle">{__('List', 'cronicle')}</option>
+            </select>
+          </div>
+
+          {/* Options Toggle */}
+          <button 
+            type="button" 
+            className="button button-small cronicle-options-toggle"
+            onClick={() => setShowOptions(!showOptions)}
+          >
+            {showOptions ? __('Less', 'cronicle') : __('More', 'cronicle')}
+          </button>
+        </div>
+
+        {/* Expandable Context Options */}
+        {showOptions && (
+          <div className="cronicle-input-context-options">
+            <span className="cronicle-context-label">{__('Include:', 'cronicle')}</span>
+            <div className="cronicle-context-checkboxes-inline">
+              {Object.entries(state.enabledContextProviders || {}).map(([provider, enabled]) => (
+                <label key={provider} className="cronicle-context-checkbox-inline">
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    onChange={handleContextProviderChange(provider)}
+                  />
+                  <span>
+                    {provider === 'writing_style' ? __('Style', 'cronicle') :
+                     provider === 'conversation' ? __('Chat', 'cronicle') :
+                     __(provider.charAt(0).toUpperCase() + provider.slice(1), 'cronicle')}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Input Form */}
       <form className="cronicle-input-form" onSubmit={handleSubmit}>
         <textarea
           ref={textareaRef}
@@ -171,7 +263,10 @@ const MessageInput = () => {
           value={inputValue}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder={__('What would you like to write about? (e.g., benefits of exercise, cooking tips, travel destinations)', 'cronicle')}
+          placeholder={state.selectedMode === 'outline' 
+            ? __('What topic would you like an outline for?', 'cronicle')
+            : __('What would you like to write about?', 'cronicle')
+          }
           rows="1"
         />
         <button 
