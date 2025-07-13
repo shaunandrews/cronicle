@@ -23,10 +23,7 @@ wp-*.php
 xmlrpc.php
 .htaccess
 
-# Build outputs
-/plugin/assets/js/cronicle-admin.js
-/plugin/assets/js/cronicle-admin.asset.php
-/plugin/assets/css/
+# Build outputs (React bundle files are committed for deployment)
 dist/
 build/
 
@@ -61,8 +58,7 @@ logs/
 *.tmp
 *.temp
 
-# Package lock files (choose one based on your preference)
-package-lock.json
+# Package lock files (package-lock.json is committed for reproducible builds)
 # yarn.lock
 
 # Webpack bundle analyzer

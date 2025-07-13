@@ -41,19 +41,33 @@ class Cronicle_Enqueue {
             CRONICLE_VERSION
         );
         
-        // Enqueue JavaScript file
+        // Enqueue WordPress React dependencies
+        wp_enqueue_script('wp-element');
+        wp_enqueue_script('wp-i18n');
+        wp_enqueue_script('wp-api-fetch');
+        wp_enqueue_script('wp-components');
+        
+        // Enqueue React app bundle
         wp_enqueue_script(
             'cronicle-admin',
             CRONICLE_PLUGIN_URL . 'assets/js/cronicle-admin.js',
-            array('jquery'),
+            array('wp-element', 'wp-i18n', 'wp-api-fetch', 'wp-components'),
             CRONICLE_VERSION,
             true
         );
         
-        // Localize script for AJAX
+        // Check if API is configured
+        $is_api_configured = false;
+        if (function_exists('cronicle_api_client')) {
+            $api_client = cronicle_api_client();
+            $is_api_configured = $api_client && $api_client->is_api_ready();
+        }
+        
+        // Localize script for AJAX and React
         wp_localize_script('cronicle-admin', 'cronicle_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('cronicle_chat_nonce'),
+            'api_configured' => $is_api_configured,
             'strings' => array(
                 'sending' => __('Sending...', 'cronicle'),
                 'error' => __('Error sending message. Please try again.', 'cronicle'),
