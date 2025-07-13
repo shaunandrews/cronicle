@@ -159,6 +159,34 @@ body.toplevel_page_cronicle:not(.folded) .cronicle-container {
     box-shadow: 0 0 0 1px #0073aa;
 }
 
+.cronicle-session-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cronicle-new-session-btn {
+    padding: 6px 12px !important;
+    font-size: 14px !important;
+    border-radius: 4px !important;
+    border: 1px solid #c3c4c7 !important;
+    background: #f9f9f9 !important;
+    color: #23282d !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.cronicle-new-session-btn:hover {
+    background: #e9e9e9 !important;
+    border-color: #8c8f94 !important;
+}
+
+.cronicle-new-session-btn:focus {
+    border-color: #0073aa !important;
+    outline: none !important;
+    box-shadow: 0 0 0 1px #0073aa !important;
+}
+
 .cronicle-status {
     padding: 5px 12px;
     border-radius: 3px;

@@ -14,6 +14,11 @@ $is_api_configured = isset($is_api_configured) ? $is_api_configured : false;
             <h1><?php _e('Cronicle AI Assistant', 'cronicle'); ?></h1>
             <div class="cronicle-header-right">
                 <?php if ($is_api_configured): ?>
+                <div class="cronicle-session-controls">
+                    <button type="button" class="button cronicle-new-session-btn">
+                        <?php _e('New Chat', 'cronicle'); ?>
+                    </button>
+                </div>
                 <div class="cronicle-mode-selector">
                     <label for="cronicle-mode-select"><?php _e('Mode:', 'cronicle'); ?></label>
                     <select id="cronicle-mode-select" class="cronicle-mode-select">

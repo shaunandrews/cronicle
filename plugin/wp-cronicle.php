@@ -60,6 +60,7 @@ class Cronicle_Plugin {
         require_once CRONICLE_PLUGIN_DIR . 'includes/admin/class-cronicle-router.php';
         require_once CRONICLE_PLUGIN_DIR . 'includes/admin/class-cronicle-ui.php';
         require_once CRONICLE_PLUGIN_DIR . 'includes/admin/class-cronicle-enqueue.php';
+        require_once CRONICLE_PLUGIN_DIR . 'includes/class-cronicle-chat-history.php';
         require_once CRONICLE_PLUGIN_DIR . 'includes/admin/class-cronicle-chat-handler.php';
         require_once CRONICLE_PLUGIN_DIR . 'includes/admin/class-cronicle-admin-main-refactored.php';
         

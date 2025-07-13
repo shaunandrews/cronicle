@@ -59,6 +59,16 @@ class Cronicle_Router {
             'cronicle-settings',                           // Menu slug (matches existing settings page)
             array($this, 'redirect_to_settings')          // Callback function
         );
+        
+        // Add submenu for chat sessions
+        add_submenu_page(
+            self::PAGE_SLUG,                               // Parent slug
+            __('Chat Sessions', 'cronicle'),               // Page title
+            __('Chat Sessions', 'cronicle'),               // Menu title
+            'edit_posts',                                  // Capability required
+            'edit.php?post_type=cronicle_chats',           // Menu slug
+            null                                           // No callback needed for post type link
+        );
     }
     
     /**

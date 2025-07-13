@@ -16,6 +16,10 @@ jQuery(document).ready(function($) {
     var $previewContent = $(".cronicle-preview-content");
     var $previewActions = $(".cronicle-preview-actions");
     var currentDraft = null;
+    var currentSessionId = null;
+    
+    // Load chat history on page load
+    loadChatHistory();
     
     // Handle form submission
     $form.on("submit", function(e) {
@@ -123,71 +127,7 @@ jQuery(document).ready(function($) {
 
     $input.on("input", resizeInput);
     
-    // Add message to chat
-    function addMessage(type, content, data) {
-        data = data || {};
-
-        // Hide welcome message on first interaction
-        if ($welcomeMessage.length) {
-            $welcomeMessage.hide();
-        }
-        
-        var $message = $("<div>").addClass("cronicle-message").addClass(type);
-        var $content = $("<div>").addClass("cronicle-message-content").text(content);
-        
-        // Add post creation button and preview if this is post content
-        if (data.is_post_content && data.post_data) {
-            currentDraft = data.post_data;
-            var $actions = $("<div>").addClass("cronicle-post-actions");
-            var buttonText = data.post_data.is_outline ? "Create Outline Draft" : "Create Draft Post";
-            var $createButton = $("<button>")
-                .addClass("cronicle-create-post-btn")
-                .text(buttonText)
-                .data("post-data", data.post_data);
-
-            var $publishButton = $("<button>")
-                .addClass("button button-primary cronicle-publish-post-btn")
-                .text(cronicle_ajax.strings.publish_post)
-                .css({"margin-left": "8px"})
-                .data("post-data", data.post_data);
-
-            var $scheduleButton = $("<button>")
-                .addClass("button cronicle-schedule-post-btn")
-                .text(cronicle_ajax.strings.schedule_post)
-                .css({"margin-left": "8px"})
-                .data("post-data", data.post_data);
-
-            var $previewButton = $("<button>")
-                .addClass("button button-secondary")
-                .text("Preview")
-                .css({"margin-left": "8px", "padding": "8px 16px", "font-size": "13px"})
-                .data("post-data", data.post_data)
-                .on("click", function() {
-                    showPreview($(this).data("post-data"));
-                });
-
-            $actions
-                .append($createButton)
-                .append($publishButton)
-                .append($scheduleButton)
-                .append($previewButton);
-            $content.append($actions);
-            
-            // Auto-show preview for new post content
-            setTimeout(function() {
-                showPreview(data.post_data);
-            }, 500);
-        }
-        
-        $message.append($content);
-        $messages.append($message);
-        
-        // Clear float
-        $messages.append($("<div>").css("clear", "both"));
-        
-        // Scroll to bottom
-        $messages.scrollTop($messages[0].scrollHeight);
-    }
+    // Placeholder for addMessage function - defined later with history support
     
     // Show preview of post content
     function showPreview(postData) {
@@ -520,6 +460,175 @@ jQuery(document).ready(function($) {
         }
         resizeInput();
     });
+
+    // Load chat history from server
+    function loadChatHistory() {
+        $.ajax({
+            url: cronicle_ajax.ajax_url,
+            type: "POST",
+            data: {
+                action: "cronicle_load_chat_history",
+                nonce: cronicle_ajax.nonce
+            },
+            success: function(response) {
+                if (response.success && response.data.messages) {
+                    currentSessionId = response.data.session_id;
+                    
+                    // Clear existing messages
+                    $messages.empty();
+                    
+                    // Load messages from history
+                    var messages = response.data.messages;
+                    if (messages.length > 0) {
+                        // Hide welcome message if we have history
+                        $welcomeMessage.hide();
+                        
+                        // Display each message
+                        for (var i = 0; i < messages.length; i++) {
+                            var msg = messages[i];
+                            var messageData = {};
+                            
+                            if (msg.post_data) {
+                                messageData = {
+                                    is_post_content: msg.is_post_content || false,
+                                    post_data: msg.post_data,
+                                    fromHistory: true
+                                };
+                            } else {
+                                messageData.fromHistory = true;
+                            }
+                            
+                            addMessage(msg.type, msg.content, messageData);
+                        }
+                    }
+                }
+            },
+            error: function() {
+                console.log("Could not load chat history");
+            }
+        });
+    }
+    
+    // Start a new chat session
+    function startNewSession() {
+        $.ajax({
+            url: cronicle_ajax.ajax_url,
+            type: "POST",
+            data: {
+                action: "cronicle_start_new_session",
+                nonce: cronicle_ajax.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    currentSessionId = response.data.session_id;
+                    
+                    // Clear chat interface
+                    $messages.empty();
+                    $welcomeMessage.show();
+                    $previewContainer.removeClass("active");
+                    currentDraft = null;
+                    
+                    // Show success message briefly
+                    addMessage("system", response.data.message);
+                    setTimeout(function() {
+                        $messages.find(".cronicle-message.system").fadeOut(function() {
+                            $(this).remove();
+                        });
+                    }, 2000);
+                }
+            },
+            error: function() {
+                alert("Could not start new session. Please try again.");
+            }
+        });
+    }
+    
+    // Add new session button functionality (to be added to UI)
+    $(document).on("click", ".cronicle-new-session-btn", function() {
+        if (confirm("Start a new chat session? This will clear the current conversation.")) {
+            startNewSession();
+        }
+    });
+    
+    // Add system message display capability
+    function addMessage(type, content, data) {
+        data = data || {};
+
+        // Hide welcome message on first interaction
+        if ($welcomeMessage.length && type !== "system") {
+            $welcomeMessage.hide();
+        }
+        
+        var $message = $("<div>").addClass("cronicle-message").addClass(type);
+        var $content = $("<div>").addClass("cronicle-message-content");
+        
+        // Handle system messages differently
+        if (type === "system") {
+            $content.html('<em>' + content + '</em>');
+            $message.append($content);
+            $messages.append($message);
+            $messages.append($("<div>").css("clear", "both"));
+            $messages.scrollTop($messages[0].scrollHeight);
+            return;
+        }
+        
+        $content.text(content);
+        
+        // Add post creation button and preview if this is post content
+        if (data.is_post_content && data.post_data) {
+            currentDraft = data.post_data;
+            var $actions = $("<div>").addClass("cronicle-post-actions");
+            var buttonText = data.post_data.is_outline ? "Create Outline Draft" : "Create Draft Post";
+            var $createButton = $("<button>")
+                .addClass("cronicle-create-post-btn")
+                .text(buttonText)
+                .data("post-data", data.post_data);
+
+            var $publishButton = $("<button>")
+                .addClass("button button-primary cronicle-publish-post-btn")
+                .text(cronicle_ajax.strings.publish_post)
+                .css({"margin-left": "8px"})
+                .data("post-data", data.post_data);
+
+            var $scheduleButton = $("<button>")
+                .addClass("button cronicle-schedule-post-btn")
+                .text(cronicle_ajax.strings.schedule_post)
+                .css({"margin-left": "8px"})
+                .data("post-data", data.post_data);
+
+            var $previewButton = $("<button>")
+                .addClass("button button-secondary")
+                .text("Preview")
+                .css({"margin-left": "8px", "padding": "8px 16px", "font-size": "13px"})
+                .data("post-data", data.post_data)
+                .on("click", function() {
+                    showPreview($(this).data("post-data"));
+                });
+
+            $actions
+                .append($createButton)
+                .append($publishButton)
+                .append($scheduleButton)
+                .append($previewButton);
+            $content.append($actions);
+            
+            // Auto-show preview for new post content (only if this is a new message, not loaded from history)
+            if (!data.fromHistory) {
+                setTimeout(function() {
+                    showPreview(data.post_data);
+                }, 500);
+            }
+        }
+        
+        $message.append($content);
+        $messages.append($message);
+        
+        // Clear float
+        $messages.append($("<div>").css("clear", "both"));
+        
+        // Scroll to bottom
+        $messages.scrollTop($messages[0].scrollHeight);
+    }
 
     // Focus input on load
     resizeInput();

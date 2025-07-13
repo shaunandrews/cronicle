@@ -19,6 +19,7 @@ class Cronicle_Admin_Main_Refactored {
     private $ui;
     private $enqueue;
     private $chat_handler;
+    private $chat_history;
     
     /**
      * Constructor
@@ -38,6 +39,9 @@ class Cronicle_Admin_Main_Refactored {
         // Initialize router with UI handler reference
         $this->router = new Cronicle_Router($this->ui);
         
+        // Initialize chat history component
+        $this->chat_history = new Cronicle_Chat_History();
+        
         // Initialize other components
         $this->enqueue = new Cronicle_Enqueue();
         $this->chat_handler = new Cronicle_Chat_Handler();
@@ -49,6 +53,7 @@ class Cronicle_Admin_Main_Refactored {
     private function register_hooks() {
         $this->router->register_hooks();
         $this->enqueue->register_hooks();
+        $this->chat_history->register_hooks();
         $this->chat_handler->register_hooks();
     }
     
@@ -69,5 +74,9 @@ class Cronicle_Admin_Main_Refactored {
     
     public function get_chat_handler() {
         return $this->chat_handler;
+    }
+    
+    public function get_chat_history() {
+        return $this->chat_history;
     }
 } 

@@ -13,6 +13,19 @@ if (!defined('ABSPATH')) {
 class Cronicle_Chat_Handler {
     
     /**
+     * Chat history instance
+     */
+    private $chat_history;
+    
+    /**
+     * Constructor
+     */
+    public function __construct() {
+        // Get chat history instance
+        $this->chat_history = cronicle_chat_history();
+    }
+    
+    /**
      * Register hooks
      */
     public function register_hooks() {
@@ -42,6 +55,22 @@ class Cronicle_Chat_Handler {
         
         if (empty($message)) {
             wp_send_json_error(array('message' => __('Message cannot be empty.', 'cronicle')));
+        }
+        
+        // Get current chat session and save user message
+        $user_id = get_current_user_id();
+        $session = $this->chat_history->get_current_session($user_id);
+        
+        if ($session) {
+            $user_message_data = array(
+                'type' => 'user',
+                'content' => $message,
+                'mode' => $mode
+            );
+            $this->chat_history->save_message($session, $user_message_data);
+            
+            // Refresh session object after saving user message
+            $session = get_post($session->ID);
         }
         
         // Get API client
@@ -77,13 +106,40 @@ class Cronicle_Chat_Handler {
             $parsed_response = $this->parse_ai_response($ai_response);
             
             if ($parsed_response) {
+                // Save AI response to chat history
+                if ($session) {
+                    $ai_message_data = array(
+                        'type' => 'assistant',
+                        'content' => $parsed_response['content'],
+                        'is_post_content' => $parsed_response['is_post_content']
+                    );
+                    
+                    if (isset($parsed_response['post_data'])) {
+                        $ai_message_data['post_data'] = $parsed_response['post_data'];
+                    }
+                    
+                    $this->chat_history->save_message($session, $ai_message_data);
+                }
+                
                 wp_send_json_success($parsed_response);
             } else {
                 // Fallback if JSON parsing fails
-                wp_send_json_success(array(
+                $fallback_response = array(
                     'content' => $ai_response,
                     'is_post_content' => false
-                ));
+                );
+                
+                // Save fallback AI response to chat history
+                if ($session) {
+                    $ai_message_data = array(
+                        'type' => 'assistant',
+                        'content' => $ai_response,
+                        'is_post_content' => false
+                    );
+                    $this->chat_history->save_message($session, $ai_message_data);
+                }
+                
+                wp_send_json_success($fallback_response);
             }
         } else {
             wp_send_json_error(array('message' => __('Unexpected response format from API.', 'cronicle')));
@@ -498,6 +554,23 @@ Respond ONLY with the JSON, no additional text before or after.';
             wp_send_json_error(array('message' => __('Invalid revision data.', 'cronicle')));
         }
 
+        // Get current chat session and save user revision request
+        $user_id = get_current_user_id();
+        $session = $this->chat_history->get_current_session($user_id);
+        
+        if ($session) {
+            $user_message_data = array(
+                'type' => 'user',
+                'content' => $instructions,
+                'revision_request' => true,
+                'post_title' => $title
+            );
+            $this->chat_history->save_message($session, $user_message_data);
+            
+            // Refresh session object after saving user message
+            $session = get_post($session->ID);
+        }
+
         $api_client = cronicle_api_client();
 
         if (!$api_client->is_api_ready()) {
@@ -527,6 +600,22 @@ Respond ONLY with the JSON, no additional text before or after.';
             $parsed = $this->parse_ai_response($ai_response);
 
             if ($parsed) {
+                // Save AI response to chat history
+                if ($session) {
+                    $ai_message_data = array(
+                        'type' => 'assistant',
+                        'content' => $parsed['content'],
+                        'is_post_content' => $parsed['is_post_content'],
+                        'revision_response' => true
+                    );
+                    
+                    if (isset($parsed['post_data'])) {
+                        $ai_message_data['post_data'] = $parsed['post_data'];
+                    }
+                    
+                    $this->chat_history->save_message($session, $ai_message_data);
+                }
+                
                 wp_send_json_success($parsed);
             } else {
                 wp_send_json_error(array('message' => __('Unexpected response format from API.', 'cronicle')));
