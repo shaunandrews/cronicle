@@ -23,6 +23,11 @@ class Cronicle_Chat_Handler {
     public function __construct() {
         // Get chat history instance
         $this->chat_history = cronicle_chat_history();
+        
+        // Load context system if not already loaded
+        if (class_exists('Cronicle_Context_Loader')) {
+            Cronicle_Context_Loader::load();
+        }
     }
     
     /**
@@ -83,12 +88,15 @@ class Cronicle_Chat_Handler {
             ));
         }
         
-        // Gather site and user context
-        $site_context = $this->get_site_context();
-        $user_context = $this->get_user_context();
-        
-        // Create structured prompt for blog post generation
-        $structured_prompt = $this->build_post_generation_prompt($message, $mode, $site_context, $user_context);
+        // Use new context system if available, otherwise fall back to legacy
+        if (function_exists('cronicle_context_manager') && function_exists('cronicle_prompt_template_library')) {
+            $structured_prompt = $this->generate_prompt_with_new_system($message, $mode);
+        } else {
+            // Legacy fallback
+            $site_context = $this->get_site_context();
+            $user_context = $this->get_user_context();
+            $structured_prompt = $this->build_post_generation_prompt($message, $mode, $site_context, $user_context);
+        }
         
         // Generate response using Claude
         $response = $api_client->generate_content($structured_prompt, array(
@@ -123,9 +131,19 @@ class Cronicle_Chat_Handler {
                 
                 wp_send_json_success($parsed_response);
             } else {
-                // Fallback if JSON parsing fails
+                // Fallback if JSON parsing fails - provide user-friendly message
+                $fallback_content = __('I generated content for you, but there was an issue with the response format. Please try your request again.', 'cronicle');
+                
+                // Try to extract just the chat_response from the raw JSON if possible
+                if (strpos($ai_response, '"chat_response"') !== false) {
+                    $pattern = '/"chat_response"\s*:\s*"([^"]+)"/';
+                    if (preg_match($pattern, $ai_response, $matches)) {
+                        $fallback_content = $matches[1];
+                    }
+                }
+                
                 $fallback_response = array(
-                    'content' => $ai_response,
+                    'content' => $fallback_content,
                     'is_post_content' => false
                 );
                 
@@ -133,7 +151,7 @@ class Cronicle_Chat_Handler {
                 if ($session) {
                     $ai_message_data = array(
                         'type' => 'assistant',
-                        'content' => $ai_response,
+                        'content' => $fallback_content,
                         'is_post_content' => false
                     );
                     $this->chat_history->save_message($session, $ai_message_data);
@@ -338,7 +356,19 @@ Respond ONLY with the JSON, no additional text before or after.';
         $response = preg_replace('/\s*```$/', '', $response);
         $response = trim($response);
         
-        $parsed = json_decode($response, true);
+        // Try to extract JSON if the response contains other text
+        if (strpos($response, '{') !== false) {
+            $json_start = strpos($response, '{');
+            $json_end = strrpos($response, '}');
+            if ($json_start !== false && $json_end !== false && $json_end > $json_start) {
+                $json_part = substr($response, $json_start, $json_end - $json_start + 1);
+                $parsed = json_decode($json_part, true);
+            } else {
+                $parsed = json_decode($response, true);
+            }
+        } else {
+            $parsed = json_decode($response, true);
+        }
         
         if (json_last_error() === JSON_ERROR_NONE && isset($parsed['chat_response']) && isset($parsed['post_content'])) {
             // Determine if this is an outline based on word count (outlines are typically shorter)
@@ -580,10 +610,15 @@ Respond ONLY with the JSON, no additional text before or after.';
             ));
         }
 
-        $site_context = $this->get_site_context();
-        $user_context = $this->get_user_context();
-
-        $prompt = $this->build_revision_prompt($title, $content, $instructions, $site_context, $user_context);
+        // Use new context system if available, otherwise fall back to legacy
+        if (function_exists('cronicle_context_manager') && function_exists('cronicle_prompt_template_library')) {
+            $prompt = $this->generate_revision_prompt_with_new_system($title, $content, $instructions);
+        } else {
+            // Legacy fallback
+            $site_context = $this->get_site_context();
+            $user_context = $this->get_user_context();
+            $prompt = $this->build_revision_prompt($title, $content, $instructions, $site_context, $user_context);
+        }
 
         $response = $api_client->generate_content($prompt, array(
             'model' => 'claude-3-5-sonnet-20241022',
@@ -618,10 +653,157 @@ Respond ONLY with the JSON, no additional text before or after.';
                 
                 wp_send_json_success($parsed);
             } else {
-                wp_send_json_error(array('message' => __('Unexpected response format from API.', 'cronicle')));
+                // Fallback for revision if parsing fails
+                $fallback_content = __('I created a revision for you, but there was an issue with the response format. Please try your revision request again.', 'cronicle');
+                
+                // Try to extract just the chat_response from the raw JSON if possible
+                if (strpos($ai_response, '"chat_response"') !== false) {
+                    $pattern = '/"chat_response"\s*:\s*"([^"]+)"/';
+                    if (preg_match($pattern, $ai_response, $matches)) {
+                        $fallback_content = $matches[1];
+                    }
+                }
+                
+                wp_send_json_error(array('message' => $fallback_content));
             }
         } else {
             wp_send_json_error(array('message' => __('Unexpected response format from API.', 'cronicle')));
         }
+    }
+    
+    /**
+     * Generate prompt using new context management system
+     * 
+     * @param string $message User message
+     * @param string $mode Content generation mode
+     * @return string Generated prompt
+     */
+    private function generate_prompt_with_new_system($message, $mode) {
+        $context_manager = cronicle_context_manager();
+        $template_library = cronicle_prompt_template_library();
+        $preferences_engine = cronicle_preferences_engine();
+        
+        // Get user preferences to determine template and context
+        $user_preferences = $preferences_engine->get_user_preferences();
+        
+        // Determine the best template based on mode and preferences
+        $template_criteria = array(
+            'mode' => $mode,
+            'category' => $mode === 'outline' ? 'outline' : 'blog_post'
+        );
+        
+        // Add user style preferences to criteria
+        if (isset($user_preferences['writing_style']['tone'])) {
+            $template_criteria['tone'] = $user_preferences['writing_style']['tone'];
+        }
+        
+        if (isset($user_preferences['content_preferences']['default_content_type'])) {
+            $template_criteria['content_type'] = $user_preferences['content_preferences']['default_content_type'];
+        }
+        
+        // Find the best template
+        $template_key = $template_library->find_best_template($template_criteria);
+        
+        if (is_wp_error($template_key)) {
+            // Fallback to default templates
+            $template_key = $mode === 'outline' ? 'content-outline' : 'blog-post-professional';
+        }
+        
+        // Prepare context options
+        $context_options = array(
+            'topic' => $message,
+            'mode' => $mode
+        );
+        
+        // Add any additional options from user preferences
+        if (isset($user_preferences['writing_style']['preferred_length'])) {
+            $target_length = $this->map_length_preference_to_words($user_preferences['writing_style']['preferred_length']);
+            $context_options['target_length'] = $target_length;
+        }
+        
+        // Prepare template variables
+        $template_variables = array(
+            'topic' => $message,
+            'mode' => $mode,
+            'target_length' => $context_options['target_length'] ?? null,
+            'is_outline' => $mode === 'outline'
+        );
+        
+        // Add mode-specific variables
+        if ($mode === 'outline') {
+            $template_variables['target_sections'] = $user_preferences['content_preferences']['target_sections'] ?? 6;
+            $template_variables['content_type'] = $user_preferences['content_preferences']['default_content_type'] ?? 'blog_post';
+        }
+        
+        // Generate the complete prompt with context
+        $prompt = $context_manager->generate_prompt($template_key, $template_variables, $context_options);
+        
+        if (is_wp_error($prompt)) {
+            // Fallback to legacy system
+            $site_context = $this->get_site_context();
+            $user_context = $this->get_user_context();
+            return $this->build_post_generation_prompt($message, $mode, $site_context, $user_context);
+        }
+        
+        return $prompt;
+    }
+    
+    /**
+     * Map length preference to word count
+     * 
+     * @param string $preference Length preference
+     * @return int Target word count
+     */
+    private function map_length_preference_to_words($preference) {
+        switch ($preference) {
+            case 'short':
+                return 400;
+            case 'medium':
+                return 600;
+            case 'long':
+                return 900;
+            case 'comprehensive':
+                return 1200;
+            default:
+                return 600;
+        }
+    }
+    
+    /**
+     * Generate revision prompt using new context management system
+     * 
+     * @param string $title Original title
+     * @param string $content Original content 
+     * @param string $instructions Revision instructions
+     * @return string Generated prompt
+     */
+    private function generate_revision_prompt_with_new_system($title, $content, $instructions) {
+        $context_manager = cronicle_context_manager();
+        $template_library = cronicle_prompt_template_library();
+        
+        // Prepare template variables
+        $template_variables = array(
+            'original_title' => $title,
+            'original_content' => $content,
+            'revision_instructions' => $instructions
+        );
+        
+        // Prepare context options for revision
+        $context_options = array(
+            'topic' => $title,
+            'mode' => 'revision'
+        );
+        
+        // Generate the complete prompt with context
+        $prompt = $context_manager->generate_prompt('content-revision', $template_variables, $context_options);
+        
+        if (is_wp_error($prompt)) {
+            // Fallback to legacy system
+            $site_context = $this->get_site_context();
+            $user_context = $this->get_user_context();
+            return $this->build_revision_prompt($title, $content, $instructions, $site_context, $user_context);
+        }
+        
+        return $prompt;
     }
 }

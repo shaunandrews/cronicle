@@ -56,6 +56,12 @@ class Cronicle_Plugin {
         // Include API client class
         require_once CRONICLE_PLUGIN_DIR . 'includes/class-cronicle-api-client.php';
         
+        // Include context system loader
+        require_once CRONICLE_PLUGIN_DIR . 'includes/context/class-cronicle-context-loader.php';
+        
+        // Load context system
+        Cronicle_Context_Loader::load();
+        
         // Include refactored admin classes
         require_once CRONICLE_PLUGIN_DIR . 'includes/admin/class-cronicle-router.php';
         require_once CRONICLE_PLUGIN_DIR . 'includes/admin/class-cronicle-ui.php';

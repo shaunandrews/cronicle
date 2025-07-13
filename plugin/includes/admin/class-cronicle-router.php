@@ -50,6 +50,16 @@ class Cronicle_Router {
             30                                             // Position
         );
         
+        // Add submenu for context
+        add_submenu_page(
+            self::PAGE_SLUG,                               // Parent slug
+            __('Cronicle Context', 'cronicle'),            // Page title
+            __('Context', 'cronicle'),                     // Menu title
+            'edit_posts',                                  // Capability required
+            'cronicle-context',                            // Menu slug
+            array($this, 'render_context_page')           // Callback function
+        );
+        
         // Add submenu for settings
         add_submenu_page(
             self::PAGE_SLUG,                               // Parent slug
@@ -93,6 +103,23 @@ class Cronicle_Router {
         } else {
             // Fallback if UI handler is not available
             echo '<div class="wrap"><h1>' . __('Cronicle', 'cronicle') . '</h1><p>' . __('UI handler not available.', 'cronicle') . '</p></div>';
+        }
+    }
+    
+    /**
+     * Render the context page
+     */
+    public function render_context_page() {
+        // Check user permissions
+        if (!current_user_can('edit_posts')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'cronicle'));
+        }
+        
+        if ($this->ui_handler && method_exists($this->ui_handler, 'render_context_page')) {
+            $this->ui_handler->render_context_page();
+        } else {
+            // Fallback if UI handler is not available
+            echo '<div class="wrap"><h1>' . __('Cronicle Context', 'cronicle') . '</h1><p>' . __('Context system not available.', 'cronicle') . '</p></div>';
         }
     }
 } 

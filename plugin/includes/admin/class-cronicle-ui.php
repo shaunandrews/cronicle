@@ -22,4 +22,12 @@ class Cronicle_UI {
         // Include the main page template
         include CRONICLE_PLUGIN_DIR . 'includes/admin/views/main-page.php';
     }
+    
+    /**
+     * Render the context page
+     */
+    public function render_context_page() {
+        // Include the context page template
+        include CRONICLE_PLUGIN_DIR . 'includes/admin/views/context-page.php';
+    }
 } 
