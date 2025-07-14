@@ -8,7 +8,7 @@ import { ACTIONS } from '../context/CronicleContext';
 import PostPreview from './PostPreview';
 import ActionButtons from './ActionButtons';
 
-const PreviewPanel = () => {
+const PreviewPanel = ({ width = 400 }) => {
   const { state, dispatch } = useCronicle();
 
   const handleClose = () => {
@@ -24,7 +24,10 @@ const PreviewPanel = () => {
     : __('Post Preview', 'cronicle');
 
   return (
-    <div className={`cronicle-preview-container ${state.showPreview ? 'active' : ''}`}>
+    <div 
+      className={`cronicle-preview-container ${state.showPreview ? 'active' : ''}`}
+      style={{ width: `${width}px` }}
+    >
       <div className="cronicle-preview-header">
         <span className="cronicle-preview-title">{headerText}</span>
         <button 

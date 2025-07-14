@@ -7,7 +7,29 @@ import { __ } from '@wordpress/i18n';
 import CronicleHeader from './CronicleHeader';
 import ChatContainer from './ChatContainer';
 import PreviewPanel from './PreviewPanel';
-import { CronicleProvider } from '../context/CronicleContext';
+import ResizableDivider from './ResizableDivider';
+import { CronicleProvider, useCronicle } from '../context/CronicleContext';
+
+const CronicleMainContent = () => {
+  const { state } = useCronicle();
+  const [previewWidth, setPreviewWidth] = useState(400);
+
+  const handleResize = (newWidth) => {
+    setPreviewWidth(newWidth);
+  };
+
+  return (
+    <div className="cronicle-main-content">
+      <ChatContainer />
+      {state.showPreview && state.currentDraft && (
+        <>
+          <ResizableDivider onResize={handleResize} />
+          <PreviewPanel width={previewWidth} />
+        </>
+      )}
+    </div>
+  );
+};
 
 const CronicleApp = () => {
   const [isApiConfigured, setIsApiConfigured] = useState(false);
@@ -61,10 +83,7 @@ const CronicleApp = () => {
       <div className="wrap">
         <div className="cronicle-container">
           <CronicleHeader isApiConfigured={true} />
-          <div className="cronicle-main-content">
-            <ChatContainer />
-            <PreviewPanel />
-          </div>
+          <CronicleMainContent />
         </div>
       </div>
     </CronicleProvider>
