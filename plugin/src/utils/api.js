@@ -78,3 +78,19 @@ export const startNewSession = async () => {
     action: 'cronicle_start_new_session'
   });
 };
+
+// Load session list
+export const loadSessionList = async () => {
+  return makeAjaxRequest({
+    action: 'cronicle_load_session_list'
+  });
+};
+
+// Switch to different session
+export const switchSession = async (sessionId) => {
+  return makeAjaxRequest({
+    action: 'cronicle_switch_session',
+    session_id: sessionId
+  });
+};
+

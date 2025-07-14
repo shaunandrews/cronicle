@@ -46,6 +46,9 @@ class Cronicle_Chat_History {
         add_action('wp_ajax_cronicle_start_new_session', array($this, 'handle_start_new_session'));
         add_action('wp_ajax_cronicle_load_session_list', array($this, 'handle_load_session_list'));
         add_action('wp_ajax_cronicle_switch_session', array($this, 'handle_switch_session'));
+        
+        // Add a test endpoint to verify AJAX is working
+        add_action('wp_ajax_cronicle_test', array($this, 'handle_test'));
     }
     
     /**
@@ -352,6 +355,13 @@ class Cronicle_Chat_History {
             'messages' => $messages,
             'session_title' => $session->post_title
         ));
+    }
+    
+    /**
+     * AJAX handler: Test endpoint
+     */
+    public function handle_test() {
+        wp_send_json_success(array('message' => 'Test endpoint working'));
     }
     
     /**

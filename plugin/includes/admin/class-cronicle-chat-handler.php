@@ -20,9 +20,9 @@ class Cronicle_Chat_Handler {
     /**
      * Constructor
      */
-    public function __construct() {
+    public function __construct($chat_history = null) {
         // Get chat history instance
-        $this->chat_history = cronicle_chat_history();
+        $this->chat_history = $chat_history ?: cronicle_chat_history();
         
         // Load context system if not already loaded
         if (class_exists('Cronicle_Context_Loader')) {
@@ -56,8 +56,8 @@ class Cronicle_Chat_Handler {
         }
         
         $message = sanitize_textarea_field($_POST['message']);
-        $mode = sanitize_text_field($_POST['mode']) ?: 'draft';
-        $template = sanitize_text_field($_POST['template']) ?: 'auto';
+        $mode = sanitize_text_field($_POST['mode'] ?? 'draft');
+        $template = sanitize_text_field($_POST['template'] ?? 'auto');
         $context_providers = isset($_POST['context_providers']) ? $_POST['context_providers'] : array();
         
         if (empty($message)) {

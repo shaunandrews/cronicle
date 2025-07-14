@@ -18,12 +18,13 @@ const ChatContainer = () => {
     const loadHistory = async () => {
       try {
         const response = await loadChatHistory();
+        
         if (response.success && response.data.messages) {
           dispatch({ type: ACTIONS.SET_SESSION_ID, payload: response.data.session_id });
           dispatch({ type: ACTIONS.LOAD_MESSAGES, payload: response.data.messages });
         }
       } catch (error) {
-        console.log('Could not load chat history:', error);
+        console.error('Error loading chat history:', error);
       }
     };
 

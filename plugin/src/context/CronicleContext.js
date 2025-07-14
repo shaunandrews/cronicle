@@ -9,6 +9,7 @@ const initialState = {
   messages: [],
   currentDraft: null,
   currentSessionId: null,
+  sessions: [],
   selectedMode: 'draft',
   selectedTemplate: 'auto', // Auto-select best template
   enabledContextProviders: {
@@ -29,6 +30,7 @@ export const ACTIONS = {
   ADD_MESSAGE: 'ADD_MESSAGE',
   SET_CURRENT_DRAFT: 'SET_CURRENT_DRAFT',
   SET_SESSION_ID: 'SET_SESSION_ID',
+  SET_SESSIONS: 'SET_SESSIONS',
   SET_MODE: 'SET_MODE',
   SET_TEMPLATE: 'SET_TEMPLATE',
   SET_CONTEXT_PROVIDER: 'SET_CONTEXT_PROVIDER',
@@ -60,6 +62,12 @@ const cronicleReducer = (state, action) => {
       return {
         ...state,
         currentSessionId: action.payload,
+      };
+    
+    case ACTIONS.SET_SESSIONS:
+      return {
+        ...state,
+        sessions: action.payload,
       };
     
     case ACTIONS.SET_MODE:

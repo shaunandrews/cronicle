@@ -44,7 +44,7 @@ class Cronicle_Admin_Main_Refactored {
         
         // Initialize other components
         $this->enqueue = new Cronicle_Enqueue();
-        $this->chat_handler = new Cronicle_Chat_Handler();
+        $this->chat_handler = new Cronicle_Chat_Handler($this->chat_history);
     }
     
     /**

@@ -210,32 +210,31 @@ class Cronicle_Conversation_Context_Provider extends Cronicle_Context_Provider_B
         $messages = array_reverse(array_slice($messages, 0, $max_messages));
         
         foreach ($messages as $message) {
-            $message_data = json_decode($message->post_content, true);
-            
-            if (!$message_data || !isset($message_data['type'])) {
+            // Messages from chat history are already arrays, not post objects
+            if (!is_array($message) || !isset($message['type'])) {
                 continue;
             }
             
             $formatted_message = array(
-                'type' => $message_data['type'],
-                'content' => wp_trim_words($message_data['content'] ?? '', 20),
-                'timestamp' => get_the_date('Y-m-d H:i:s', $message)
+                'type' => $message['type'],
+                'content' => wp_trim_words($message['content'] ?? '', 20),
+                'timestamp' => $message['timestamp'] ?? current_time('Y-m-d H:i:s')
             );
             
             // Add additional context for specific message types
-            if ($message_data['type'] === 'user') {
-                if (isset($message_data['mode'])) {
-                    $formatted_message['mode'] = $message_data['mode'];
+            if ($message['type'] === 'user') {
+                if (isset($message['mode'])) {
+                    $formatted_message['mode'] = $message['mode'];
                 }
-                if (isset($message_data['revision_request'])) {
+                if (isset($message['revision_request'])) {
                     $formatted_message['is_revision'] = true;
                 }
-            } elseif ($message_data['type'] === 'assistant') {
-                if (isset($message_data['is_post_content'])) {
-                    $formatted_message['generated_content'] = $message_data['is_post_content'];
+            } elseif ($message['type'] === 'assistant') {
+                if (isset($message['is_post_content'])) {
+                    $formatted_message['generated_content'] = $message['is_post_content'];
                 }
-                if (isset($message_data['post_data']['title'])) {
-                    $formatted_message['post_title'] = $message_data['post_data']['title'];
+                if (isset($message['post_data']['title'])) {
+                    $formatted_message['post_title'] = $message['post_data']['title'];
                 }
             }
             
